@@ -114,6 +114,8 @@ export class UIManager {
 
   private setupPauseScreen(): void {
     const resumeButton = document.getElementById('resume-button');
+    const saveButton = document.getElementById('save-button');
+    const loadButton = document.getElementById('load-button');
     const restartButton = document.getElementById('restart-button');
 
     if (resumeButton) {
@@ -123,11 +125,41 @@ export class UIManager {
       });
     }
 
+    if (saveButton) {
+      saveButton.addEventListener('click', () => {
+        (window as any).game?.saveGame();
+      });
+    }
+
+    if (loadButton) {
+      loadButton.addEventListener('click', () => {
+        const success = (window as any).game?.loadGame();
+        if (success) {
+          this.setPauseState(false);
+          (window as any).game?.togglePause();
+        }
+      });
+    }
+
     if (restartButton) {
       restartButton.addEventListener('click', () => {
         this.setPauseState(false);
         (window as any).game?.restartGame();
       });
+    }
+
+    this.updateLoadButtonState();
+  }
+
+  private updateLoadButtonState(): void {
+    const loadButton = document.getElementById(
+      'load-button'
+    ) as HTMLButtonElement;
+    if (loadButton) {
+      const hasSave = (window as any).game?.hasSaveData();
+      loadButton.disabled = !hasSave;
+      loadButton.style.opacity = hasSave ? '1' : '0.5';
+      loadButton.style.cursor = hasSave ? 'pointer' : 'not-allowed';
     }
   }
 
@@ -135,6 +167,45 @@ export class UIManager {
     const pauseScreen = document.getElementById('pause-screen');
     if (pauseScreen) {
       pauseScreen.style.display = isPaused ? 'flex' : 'none';
+      if (isPaused) {
+        this.updateLoadButtonState();
+      }
     }
+  }
+
+  showSaveMessage(message: string): void {
+    // Create or update save message element
+    let saveMessage = document.getElementById('save-message');
+    if (!saveMessage) {
+      saveMessage = document.createElement('div');
+      saveMessage.id = 'save-message';
+      saveMessage.style.cssText = `
+        position: absolute;
+        top: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 200;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      `;
+      document.body.appendChild(saveMessage);
+    }
+
+    saveMessage.textContent = message;
+    saveMessage.style.opacity = '1';
+
+    // Hide after 2 seconds
+    setTimeout(() => {
+      if (saveMessage) {
+        saveMessage.style.opacity = '0';
+      }
+    }, 2000);
   }
 }

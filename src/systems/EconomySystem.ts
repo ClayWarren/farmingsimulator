@@ -197,4 +197,51 @@ export class EconomySystem {
 
     return results;
   }
+
+  // Save/Load functionality
+  getSaveData(): {
+    money: number;
+    inventory: { [key: string]: number };
+    marketPrices: MarketPrices;
+    lastPriceUpdate: number;
+  } {
+    const inventoryObj: { [key: string]: number } = {};
+    this.inventory.forEach((value, key) => {
+      inventoryObj[key] = value;
+    });
+
+    return {
+      money: this.money,
+      inventory: inventoryObj,
+      marketPrices: { ...this.marketPrices },
+      lastPriceUpdate: this.lastPriceUpdate,
+    };
+  }
+
+  loadSaveData(saveData: {
+    money: number;
+    inventory: { [key: string]: number };
+    marketPrices: MarketPrices;
+    lastPriceUpdate: number;
+  }): void {
+    this.money = saveData.money || 10000;
+
+    // Load inventory
+    this.inventory.clear();
+    Object.entries(saveData.inventory || {}).forEach(([cropType, quantity]) => {
+      this.inventory.set(cropType as CropType, quantity);
+    });
+
+    // Ensure all crop types exist in inventory
+    this.initializeInventory();
+    Object.entries(saveData.inventory || {}).forEach(([cropType, quantity]) => {
+      this.inventory.set(cropType as CropType, quantity);
+    });
+
+    // Load market prices
+    this.marketPrices = { ...saveData.marketPrices };
+    this.lastPriceUpdate = saveData.lastPriceUpdate || 0;
+
+    console.log('Economy system data loaded');
+  }
 }

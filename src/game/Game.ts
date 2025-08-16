@@ -9,6 +9,7 @@ import {
 } from '@babylonjs/core';
 import { SceneManager } from './SceneManager';
 import { InputManager } from './InputManager';
+import { SaveManager, GameSaveData } from './SaveManager';
 import { TimeSystem } from '../systems/TimeSystem';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { CropSystem } from '../systems/CropSystem';
@@ -182,6 +183,84 @@ export class Game {
 
   isPausedState(): boolean {
     return this.isPaused;
+  }
+
+  saveGame(): boolean {
+    try {
+      const camera = this.scene.activeCamera as FreeCamera;
+
+      const saveData: GameSaveData = {
+        version: '1.0.0',
+        timestamp: Date.now(),
+        timeData: this.timeSystem.getSaveData(),
+        economyData: this.economySystem.getSaveData(),
+        cropsData: this.cropSystem.getSaveData(),
+        weatherData: this.weatherSystem.getSaveData(),
+        vehicleData: this.vehicleSystem.getSaveData(),
+        playerPosition: SaveManager.vector3ToObject(camera.position),
+        playerRotation: SaveManager.vector3ToObject(camera.rotation),
+      };
+
+      const success = SaveManager.saveGame(saveData);
+      if (success) {
+        console.log('Game saved successfully!');
+        this.uiManager.showSaveMessage('Game Saved!');
+      } else {
+        console.error('Failed to save game');
+        this.uiManager.showSaveMessage('Save Failed!');
+      }
+      return success;
+    } catch (error) {
+      console.error('Error saving game:', error);
+      this.uiManager.showSaveMessage('Save Error!');
+      return false;
+    }
+  }
+
+  loadGame(): boolean {
+    try {
+      const saveData = SaveManager.loadGame();
+      if (!saveData) {
+        console.log('No save data found');
+        this.uiManager.showSaveMessage('No Save Found!');
+        return false;
+      }
+
+      // Load all systems
+      this.timeSystem.loadSaveData(saveData.timeData);
+      this.economySystem.loadSaveData(saveData.economyData);
+      this.cropSystem.loadSaveData(saveData.cropsData);
+      this.weatherSystem.loadSaveData(saveData.weatherData);
+      this.vehicleSystem.loadSaveData(saveData.vehicleData);
+
+      // Restore player position and rotation
+      const camera = this.scene.activeCamera as FreeCamera;
+      camera.position = SaveManager.objectToVector3(saveData.playerPosition);
+      camera.rotation = SaveManager.objectToVector3(saveData.playerRotation);
+
+      // Update UI
+      this.uiManager.update();
+
+      console.log('Game loaded successfully!');
+      this.uiManager.showSaveMessage('Game Loaded!');
+      return true;
+    } catch (error) {
+      console.error('Error loading game:', error);
+      this.uiManager.showSaveMessage('Load Error!');
+      return false;
+    }
+  }
+
+  hasSaveData(): boolean {
+    return SaveManager.hasSaveData();
+  }
+
+  deleteSave(): boolean {
+    const success = SaveManager.deleteSave();
+    if (success) {
+      this.uiManager.showSaveMessage('Save Deleted!');
+    }
+    return success;
   }
 
   start(): void {

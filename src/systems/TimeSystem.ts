@@ -107,4 +107,29 @@ export class TimeSystem {
   getTimeScale(): number {
     return this.timeScale;
   }
+
+  // Save/Load functionality
+  getSaveData(): TimeData & { timeScale: number; realTimeAccumulator: number } {
+    return {
+      ...this.timeData,
+      timeScale: this.timeScale,
+      realTimeAccumulator: this.realTimeAccumulator,
+    };
+  }
+
+  loadSaveData(
+    saveData: TimeData & { timeScale: number; realTimeAccumulator: number }
+  ): void {
+    this.timeData = {
+      hour: saveData.hour,
+      minute: saveData.minute,
+      day: saveData.day,
+      season: saveData.season,
+      year: saveData.year,
+    };
+    this.timeScale = saveData.timeScale || 60;
+    this.realTimeAccumulator = saveData.realTimeAccumulator || 0;
+
+    console.log('Time system data loaded');
+  }
 }

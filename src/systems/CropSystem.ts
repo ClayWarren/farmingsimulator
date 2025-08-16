@@ -267,4 +267,74 @@ export class CropSystem {
       crop => crop.growthStage === 3
     ).length;
   }
+
+  // Save/Load functionality
+  getSaveData(): Array<{
+    type: CropType;
+    plantedDay: number;
+    plantedSeason: string;
+    growthStage: number;
+    position: { x: number; y: number; z: number };
+  }> {
+    return Array.from(this.crops.values()).map(crop => ({
+      type: crop.type,
+      plantedDay: crop.plantedDay,
+      plantedSeason: crop.plantedSeason,
+      growthStage: crop.growthStage,
+      position: {
+        x: crop.position.x,
+        y: crop.position.y,
+        z: crop.position.z,
+      },
+    }));
+  }
+
+  loadSaveData(
+    saveData: Array<{
+      type: CropType;
+      plantedDay: number;
+      plantedSeason: string;
+      growthStage: number;
+      position: { x: number; y: number; z: number };
+    }>
+  ): void {
+    // Clear existing crops
+    this.crops.forEach(crop => {
+      if (crop.mesh) {
+        crop.mesh.dispose();
+      }
+    });
+    this.crops.clear();
+
+    // Load saved crops
+    saveData.forEach(savedCrop => {
+      const position = new Vector3(
+        savedCrop.position.x,
+        savedCrop.position.y,
+        savedCrop.position.z
+      );
+
+      const template = this.cropTemplates.get(savedCrop.type);
+      if (!template) return;
+
+      const key = `${position.x}_${position.z}`;
+      const cropMesh = template.createInstance(`crop_${key}`);
+      cropMesh.position = position.clone();
+      cropMesh.position.y = 0.05;
+
+      const cropData: CropData = {
+        type: savedCrop.type,
+        plantedDay: savedCrop.plantedDay,
+        plantedSeason: savedCrop.plantedSeason,
+        growthStage: savedCrop.growthStage,
+        position: position.clone(),
+        mesh: cropMesh,
+      };
+
+      this.crops.set(key, cropData);
+      this.updateCropAppearance(cropData);
+    });
+
+    console.log(`Crop system data loaded: ${saveData.length} crops restored`);
+  }
 }

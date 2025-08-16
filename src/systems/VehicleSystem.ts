@@ -293,4 +293,87 @@ export class VehicleSystem {
     }
     return null;
   }
+
+  // Save/Load functionality
+  getSaveData(): {
+    isInVehicle: boolean;
+    currentVehicleId?: string;
+    vehicles: Array<{
+      id: string;
+      position: { x: number; y: number; z: number };
+      rotation: { x: number; y: number; z: number };
+      speed: number;
+      isOccupied: boolean;
+    }>;
+  } {
+    const vehiclesData = Array.from(this.vehicles.values()).map(vehicle => ({
+      id: vehicle.id,
+      position: {
+        x: vehicle.mesh.position.x,
+        y: vehicle.mesh.position.y,
+        z: vehicle.mesh.position.z,
+      },
+      rotation: {
+        x: vehicle.mesh.rotation.x,
+        y: vehicle.mesh.rotation.y,
+        z: vehicle.mesh.rotation.z,
+      },
+      speed: vehicle.speed,
+      isOccupied: vehicle.isOccupied,
+    }));
+
+    return {
+      isInVehicle: this.isInVehicle(),
+      currentVehicleId: this.currentVehicle?.id,
+      vehicles: vehiclesData,
+    };
+  }
+
+  loadSaveData(saveData: {
+    isInVehicle: boolean;
+    currentVehicleId?: string;
+    vehicles: Array<{
+      id: string;
+      position: { x: number; y: number; z: number };
+      rotation: { x: number; y: number; z: number };
+      speed: number;
+      isOccupied: boolean;
+    }>;
+  }): void {
+    // Exit current vehicle if in one
+    if (this.isInVehicle()) {
+      this.exitVehicle();
+    }
+
+    // Update vehicle positions and states
+    saveData.vehicles.forEach(vehicleData => {
+      const vehicle = this.vehicles.get(vehicleData.id);
+      if (vehicle) {
+        vehicle.mesh.position = new Vector3(
+          vehicleData.position.x,
+          vehicleData.position.y,
+          vehicleData.position.z
+        );
+        vehicle.mesh.rotation = new Vector3(
+          vehicleData.rotation.x,
+          vehicleData.rotation.y,
+          vehicleData.rotation.z
+        );
+        vehicle.position = vehicle.mesh.position.clone();
+        vehicle.rotation = vehicle.mesh.rotation.clone();
+        vehicle.speed = vehicleData.speed;
+        vehicle.isOccupied = vehicleData.isOccupied;
+      }
+    });
+
+    // Re-enter vehicle if player was in one
+    if (saveData.isInVehicle && saveData.currentVehicleId) {
+      const vehicle = this.vehicles.get(saveData.currentVehicleId);
+      if (vehicle) {
+        this.enterVehicle(vehicle.id);
+      }
+    }
+
+    console.log('Vehicle system data loaded');
+  }
 }

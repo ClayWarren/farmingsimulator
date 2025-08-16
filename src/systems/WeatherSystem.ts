@@ -150,4 +150,25 @@ export class WeatherSystem {
     this.updateWeatherParameters();
     this.updateLighting();
   }
+
+  // Save/Load functionality
+  getSaveData(): WeatherData & { weatherChangeTimer: number } {
+    return {
+      ...this.weatherData,
+      weatherChangeTimer: this.weatherChangeTimer,
+    };
+  }
+
+  loadSaveData(saveData: WeatherData & { weatherChangeTimer: number }): void {
+    this.weatherData = {
+      type: saveData.type || 'Sunny',
+      temperature: saveData.temperature || 22,
+      humidity: saveData.humidity || 45,
+      windSpeed: saveData.windSpeed || 5,
+    };
+    this.weatherChangeTimer = saveData.weatherChangeTimer || 0;
+
+    this.updateLighting();
+    console.log('Weather system data loaded');
+  }
 }
