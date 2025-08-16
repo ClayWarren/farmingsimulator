@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farming Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #2c3e50;
+            color: white;
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            width: 100%;
+            height: 100vh;
+            display: block;
+            cursor: crosshair;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .ui-panel {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #34495e;
+            border-radius: 8px;
+            padding: 10px;
+            pointer-events: all;
+        }
+        
+        #hud-top {
+            top: 20px;
+            left: 20px;
+            min-width: 300px;
+        }
+        
+        #hud-bottom {
+            bottom: 20px;
+            right: 20px;
+            min-width: 200px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+        <div id="hud-top" class="ui-panel">
+            <h3>Farm Status</h3>
+            <div class="stat-item">
+                <span>Money:</span>
+                <span id="money">$10,000</span>
+            </div>
+            <div class="stat-item">
+                <span>Time:</span>
+                <span id="time">6:00 AM</span>
+            </div>
+            <div class="stat-item">
+                <span>Season:</span>
+                <span id="season">Spring</span>
+            </div>
+            <div class="stat-item">
+                <span>Weather:</span>
+                <span id="weather">Sunny</span>
+            </div>
+            <div class="stat-item">
+                <span>Crops:</span>
+                <span id="crops">0 planted</span>
+            </div>
+            <div class="stat-item">
+                <span>Inventory:</span>
+                <span id="inventory">Empty</span>
+            </div>
+        </div>
+        
+        <div id="hud-bottom" class="ui-panel">
+            <h3>Controls</h3>
+            <div style="font-size: 12px;">
+                <div>WASD - Move</div>
+                <div>Mouse - Look Around</div>
+                <div>Space - Plant/Harvest</div>
+                <div>1-4 - Select Crop</div>
+                <div>R - Sell All Crops</div>
+                <div>E - Enter Vehicle</div>
+            </div>
+            <div style="margin-top: 10px; font-size: 11px;">
+                <div>Selected: <span id="selected-crop">Wheat</span></div>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading">
+            Loading Farming Simulator...
+        </div>
+    </div>
+    
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
