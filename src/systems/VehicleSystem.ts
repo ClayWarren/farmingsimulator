@@ -33,7 +33,10 @@ export class VehicleSystem {
 
   initialize(): void {
     this.createTractor();
-    console.log('Vehicle system initialized');
+    console.log('Vehicle system initialized with', this.vehicles.size, 'vehicles');
+    this.vehicles.forEach((vehicle, id) => {
+      console.log('Vehicle created:', id, 'at position', vehicle.position);
+    });
   }
 
   private createTractor(): void {
@@ -152,7 +155,15 @@ export class VehicleSystem {
       vehicle.mesh.position.add(new Vector3(0, 3, -8)),
       this.scene
     );
+    
+    // Configure vehicle camera for mouse look
     this.vehicleCamera.setTarget(vehicle.mesh.position);
+    this.vehicleCamera.attachControls(this.scene.getEngine().getRenderingCanvas());
+    
+    // Set up proper mouse sensitivity for vehicle camera
+    this.vehicleCamera.angularSensibilityX = 2000;
+    this.vehicleCamera.angularSensibilityY = 2000;
+    
     this.scene.activeCamera = this.vehicleCamera;
 
     console.log(`Entered ${vehicle.name}`);
@@ -167,17 +178,21 @@ export class VehicleSystem {
     this.currentVehicle.isOccupied = false;
     this.currentVehicle.speed = 0;
 
+    // Detach controls from vehicle camera before switching
+    if (this.vehicleCamera) {
+      this.vehicleCamera.detachControls();
+      this.vehicleCamera.dispose();
+      this.vehicleCamera = null;
+    }
+
+    // Switch back to player camera and reattach controls
     this.scene.activeCamera = this.playerCamera;
+    this.playerCamera.attachControls(this.scene.getEngine().getRenderingCanvas());
 
     const exitPosition = this.currentVehicle.mesh.position.add(
       new Vector3(5, 2, 0)
     );
     this.playerCamera.position = exitPosition;
-
-    if (this.vehicleCamera) {
-      this.vehicleCamera.dispose();
-      this.vehicleCamera = null;
-    }
 
     console.log(`Exited ${this.currentVehicle.name}`);
     this.currentVehicle = null;
@@ -275,6 +290,10 @@ export class VehicleSystem {
 
   getCurrentVehicle(): Vehicle | null {
     return this.currentVehicle;
+  }
+
+  getVehicleCount(): number {
+    return this.vehicles.size;
   }
 
   isInVehicle(): boolean {

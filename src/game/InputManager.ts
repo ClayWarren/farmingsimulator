@@ -120,7 +120,7 @@ export class InputManager {
             this.sellAllCrops();
           }
           break;
-        case 'KeyS':
+        case 'KeyP':
           if (kbInfo.type === 1) {
             if (this.onShop) {
               this.onShop();
@@ -426,19 +426,25 @@ export class InputManager {
   }
 
   private handleVehicleInteraction(): void {
+    console.log('Vehicle interaction triggered, player position:', this.camera.position);
     if (this.vehicleSystem.isInVehicle()) {
+      console.log('Exiting vehicle');
       this.audioManager.playSound('vehicle_stop');
       this.vehicleSystem.exitVehicle();
       this.camera = this.scene.activeCamera as FreeCamera;
     } else {
       const nearestVehicle = this.vehicleSystem.getNearestVehicle(
-        this.camera.position
+        this.camera.position,
+        10 // Increased detection distance
       );
       if (nearestVehicle) {
+        console.log('Entering vehicle:', nearestVehicle.name);
         this.audioManager.playSound('vehicle_start');
         this.vehicleSystem.enterVehicle(nearestVehicle.id);
       } else {
-        console.log('No vehicle nearby');
+        console.log('No vehicle nearby. Player at:', this.camera.position);
+        // Let's also check if any vehicles exist
+        console.log('Available vehicles:', this.vehicleSystem.getVehicleCount());
       }
     }
   }

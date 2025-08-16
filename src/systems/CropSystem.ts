@@ -2,10 +2,13 @@ import {
   Scene,
   MeshBuilder,
   StandardMaterial,
+  PBRMaterial,
   Color3,
   Vector3,
   Mesh,
   InstancedMesh,
+  DynamicTexture,
+  Texture,
 } from '@babylonjs/core';
 import { TimeSystem, TimeData } from './TimeSystem';
 import { EquipmentSystem } from './EquipmentSystem';
@@ -88,26 +91,160 @@ export class CropSystem {
     Object.entries(this.cropInfo).forEach(([type, info]) => {
       const cropType = type as CropType;
 
-      const template = MeshBuilder.CreateCylinder(
-        `${cropType}_template`,
-        {
-          height: 0.1,
-          diameterTop: 0.8,
-          diameterBottom: 0.2,
-          tessellation: 6,
-        },
-        this.scene
-      );
+      // Create more realistic crop models based on type
+      let template: Mesh;
+      
+      switch (cropType) {
+        case 'wheat':
+          template = this.createWheatModel(cropType);
+          break;
+        case 'corn':
+          template = this.createCornModel(cropType);
+          break;
+        case 'potato':
+          template = this.createPotatoModel(cropType);
+          break;
+        case 'carrot':
+          template = this.createCarrotModel(cropType);
+          break;
+        default:
+          template = this.createDefaultCropModel(cropType, info);
+      }
 
-      const material = new StandardMaterial(`${cropType}_material`, this.scene);
-      material.diffuseColor = Color3.FromHexString(info.color);
-      material.emissiveColor = Color3.FromHexString(info.color).scale(0.2);
-
-      template.material = material;
       template.setEnabled(false);
-
       this.cropTemplates.set(cropType, template);
     });
+  }
+
+  private createWheatModel(cropType: CropType): Mesh {
+    const template = MeshBuilder.CreateCylinder(
+      `${cropType}_template`,
+      {
+        height: 0.1,
+        diameterTop: 0.6,
+        diameterBottom: 0.1,
+        tessellation: 8,
+      },
+      this.scene
+    );
+
+    const material = new PBRMaterial(`${cropType}_material`, this.scene);
+    material.albedoColor = Color3.FromHexString('#F4A460');
+    material.roughness = 0.8;
+    material.metallic = 0.0;
+    
+    // Add wheat-like texture
+    const wheatTexture = this.createWheatTexture();
+    material.albedoTexture = wheatTexture;
+
+    template.material = material;
+    return template;
+  }
+
+  private createCornModel(cropType: CropType): Mesh {
+    const template = MeshBuilder.CreateCylinder(
+      `${cropType}_template`,
+      {
+        height: 0.2,
+        diameterTop: 0.4,
+        diameterBottom: 0.6,
+        tessellation: 6,
+      },
+      this.scene
+    );
+
+    const material = new PBRMaterial(`${cropType}_material`, this.scene);
+    material.albedoColor = Color3.FromHexString('#228B22');
+    material.roughness = 0.7;
+    material.metallic = 0.0;
+
+    template.material = material;
+    return template;
+  }
+
+  private createPotatoModel(cropType: CropType): Mesh {
+    const template = MeshBuilder.CreateSphere(
+      `${cropType}_template`,
+      { diameter: 0.8 },
+      this.scene
+    );
+
+    const material = new PBRMaterial(`${cropType}_material`, this.scene);
+    material.albedoColor = Color3.FromHexString('#32CD32');
+    material.roughness = 0.8;
+    material.metallic = 0.0;
+
+    template.material = material;
+    template.scaling.y = 0.4; // Flatten for leafy appearance
+    return template;
+  }
+
+  private createCarrotModel(cropType: CropType): Mesh {
+    const template = MeshBuilder.CreateCylinder(
+      `${cropType}_template`,
+      {
+        height: 0.3,
+        diameterTop: 0.8,
+        diameterBottom: 0.2,
+        tessellation: 6,
+      },
+      this.scene
+    );
+
+    const material = new PBRMaterial(`${cropType}_material`, this.scene);
+    material.albedoColor = Color3.FromHexString('#FF6347');
+    material.roughness = 0.7;
+    material.metallic = 0.0;
+
+    template.material = material;
+    return template;
+  }
+
+  private createDefaultCropModel(cropType: CropType, info: any): Mesh {
+    const template = MeshBuilder.CreateCylinder(
+      `${cropType}_template`,
+      {
+        height: 0.1,
+        diameterTop: 0.8,
+        diameterBottom: 0.2,
+        tessellation: 6,
+      },
+      this.scene
+    );
+
+    const material = new PBRMaterial(`${cropType}_material`, this.scene);
+    material.albedoColor = Color3.FromHexString(info.color);
+    material.roughness = 0.8;
+    material.metallic = 0.0;
+
+    template.material = material;
+    return template;
+  }
+
+  private createWheatTexture(): DynamicTexture {
+    const texture = new DynamicTexture('wheatTexture', { width: 128, height: 128 }, this.scene);
+    const context = texture.getContext();
+    
+    // Base wheat color
+    context.fillStyle = '#F4A460';
+    context.fillRect(0, 0, 128, 128);
+    
+    // Add grain-like patterns
+    for (let i = 0; i < 50; i++) {
+      const x = Math.random() * 128;
+      const y = Math.random() * 128;
+      const size = Math.random() * 2 + 1;
+      context.fillStyle = `rgba(${200 + Math.random() * 55}, ${180 + Math.random() * 40}, ${100 + Math.random() * 30}, 0.6)`;
+      context.beginPath();
+      context.arc(x, y, size, 0, Math.PI * 2);
+      context.fill();
+    }
+    
+    texture.update();
+    texture.wrapU = Texture.WRAP_ADDRESSMODE;
+    texture.wrapV = Texture.WRAP_ADDRESSMODE;
+    
+    return texture;
   }
 
   plantCrop(cropType: CropType, position: Vector3): boolean {

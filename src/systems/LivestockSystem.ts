@@ -1,4 +1,4 @@
-import { Scene, Vector3, MeshBuilder, StandardMaterial, Color3, Mesh, InstancedMesh } from '@babylonjs/core';
+import { Scene, Vector3, MeshBuilder, StandardMaterial, PBRMaterial, Color3, Mesh, InstancedMesh, DynamicTexture, Texture } from '@babylonjs/core';
 import { TimeSystem } from './TimeSystem';
 import { EconomySystem } from './EconomySystem';
 import { FarmExpansionSystem } from './FarmExpansionSystem';
@@ -108,54 +108,208 @@ export class LivestockSystem {
     Object.entries(this.animalInfo).forEach(([type, info]) => {
       const animalType = type as AnimalType;
 
-      // Create simple geometric representations for different animals
+      // Create more realistic animal models
       let template: Mesh;
       switch (animalType) {
         case 'chicken':
-          template = MeshBuilder.CreateSphere(
-            `${animalType}_template`,
-            { diameter: 0.8 },
-            this.scene
-          );
+          template = this.createChickenModel(animalType);
           break;
         case 'cow':
-          template = MeshBuilder.CreateBox(
-            `${animalType}_template`,
-            { width: 2, height: 1.5, depth: 3 },
-            this.scene
-          );
+          template = this.createCowModel(animalType);
           break;
         case 'pig':
-          template = MeshBuilder.CreateCylinder(
-            `${animalType}_template`,
-            { height: 1, diameter: 1.5 },
-            this.scene
-          );
+          template = this.createPigModel(animalType);
           break;
         case 'sheep':
-          template = MeshBuilder.CreateSphere(
-            `${animalType}_template`,
-            { diameter: 1.2 },
-            this.scene
-          );
+          template = this.createSheepModel(animalType);
           break;
         default:
-          template = MeshBuilder.CreateSphere(
-            `${animalType}_template`,
-            { diameter: 1 },
-            this.scene
-          );
+          template = this.createDefaultAnimalModel(animalType, info);
       }
 
-      const material = new StandardMaterial(`${animalType}_material`, this.scene);
-      material.diffuseColor = Color3.FromHexString(info.color);
-      material.emissiveColor = Color3.FromHexString(info.color).scale(0.1);
-
-      template.material = material;
       template.setEnabled(false);
-
       this.animalTemplates.set(animalType, template);
     });
+  }
+
+  private createChickenModel(animalType: AnimalType): Mesh {
+    // Create chicken body (slightly flattened sphere)
+    const body = MeshBuilder.CreateSphere(
+      `${animalType}_template`,
+      { diameter: 0.8 },
+      this.scene
+    );
+    body.scaling = new Vector3(1, 0.8, 1.2);
+
+    const material = new PBRMaterial(`${animalType}_material`, this.scene);
+    material.albedoColor = Color3.FromHexString('#FFFAF0');
+    material.roughness = 0.8;
+    material.metallic = 0.0;
+    
+    // Add feather-like texture
+    const featherTexture = this.createFeatherTexture();
+    material.albedoTexture = featherTexture;
+
+    body.material = material;
+    return body;
+  }
+
+  private createCowModel(animalType: AnimalType): Mesh {
+    // Create cow body (rounded box)
+    const body = MeshBuilder.CreateBox(
+      `${animalType}_template`,
+      { width: 2, height: 1.5, depth: 3 },
+      this.scene
+    );
+
+    const material = new PBRMaterial(`${animalType}_material`, this.scene);
+    material.albedoColor = Color3.FromHexString('#8B4513');
+    material.roughness = 0.7;
+    material.metallic = 0.0;
+    
+    // Add cow pattern texture
+    const cowTexture = this.createCowPatternTexture();
+    material.albedoTexture = cowTexture;
+
+    body.material = material;
+    return body;
+  }
+
+  private createPigModel(animalType: AnimalType): Mesh {
+    // Create pig body (cylinder, slightly rotated)
+    const body = MeshBuilder.CreateCylinder(
+      `${animalType}_template`,
+      { height: 1, diameter: 1.5 },
+      this.scene
+    );
+    body.rotation.z = Math.PI / 2; // Rotate to horizontal
+
+    const material = new PBRMaterial(`${animalType}_material`, this.scene);
+    material.albedoColor = Color3.FromHexString('#FFC0CB');
+    material.roughness = 0.6;
+    material.metallic = 0.0;
+
+    body.material = material;
+    return body;
+  }
+
+  private createSheepModel(animalType: AnimalType): Mesh {
+    // Create sheep body (sphere)
+    const body = MeshBuilder.CreateSphere(
+      `${animalType}_template`,
+      { diameter: 1.2 },
+      this.scene
+    );
+
+    const material = new PBRMaterial(`${animalType}_material`, this.scene);
+    material.albedoColor = Color3.FromHexString('#FFFAF0');
+    material.roughness = 0.9;
+    material.metallic = 0.0;
+    
+    // Add wool-like texture
+    const woolTexture = this.createWoolTexture();
+    material.albedoTexture = woolTexture;
+
+    body.material = material;
+    return body;
+  }
+
+  private createDefaultAnimalModel(animalType: AnimalType, info: AnimalInfo): Mesh {
+    const template = MeshBuilder.CreateSphere(
+      `${animalType}_template`,
+      { diameter: 1 },
+      this.scene
+    );
+
+    const material = new PBRMaterial(`${animalType}_material`, this.scene);
+    material.albedoColor = Color3.FromHexString(info.color);
+    material.roughness = 0.8;
+    material.metallic = 0.0;
+
+    template.material = material;
+    return template;
+  }
+
+  private createFeatherTexture(): DynamicTexture {
+    const texture = new DynamicTexture('featherTexture', { width: 128, height: 128 }, this.scene);
+    const context = texture.getContext();
+    
+    // Base white color
+    context.fillStyle = '#FFFAF0';
+    context.fillRect(0, 0, 128, 128);
+    
+    // Add feather-like patterns
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * 128;
+      const y = Math.random() * 128;
+      const length = Math.random() * 15 + 5;
+      const width = Math.random() * 3 + 1;
+      
+      context.fillStyle = `rgba(${240 + Math.random() * 15}, ${235 + Math.random() * 20}, ${220 + Math.random() * 35}, 0.7)`;
+      context.fillRect(x, y, width, length);
+    }
+    
+    texture.update();
+    texture.wrapU = Texture.WRAP_ADDRESSMODE;
+    texture.wrapV = Texture.WRAP_ADDRESSMODE;
+    
+    return texture;
+  }
+
+  private createCowPatternTexture(): DynamicTexture {
+    const texture = new DynamicTexture('cowTexture', { width: 256, height: 256 }, this.scene);
+    const context = texture.getContext();
+    
+    // Base brown color
+    context.fillStyle = '#8B4513';
+    context.fillRect(0, 0, 256, 256);
+    
+    // Add black spots
+    for (let i = 0; i < 20; i++) {
+      const x = Math.random() * 256;
+      const y = Math.random() * 256;
+      const size = Math.random() * 30 + 10;
+      
+      context.fillStyle = '#000000';
+      context.beginPath();
+      context.arc(x, y, size, 0, Math.PI * 2);
+      context.fill();
+    }
+    
+    texture.update();
+    texture.wrapU = Texture.WRAP_ADDRESSMODE;
+    texture.wrapV = Texture.WRAP_ADDRESSMODE;
+    
+    return texture;
+  }
+
+  private createWoolTexture(): DynamicTexture {
+    const texture = new DynamicTexture('woolTexture', { width: 128, height: 128 }, this.scene);
+    const context = texture.getContext();
+    
+    // Base cream color
+    context.fillStyle = '#FFFAF0';
+    context.fillRect(0, 0, 128, 128);
+    
+    // Add woolly texture
+    for (let i = 0; i < 100; i++) {
+      const x = Math.random() * 128;
+      const y = Math.random() * 128;
+      const size = Math.random() * 3 + 1;
+      
+      context.fillStyle = `rgba(${245 + Math.random() * 10}, ${245 + Math.random() * 10}, ${240 + Math.random() * 15}, 0.8)`;
+      context.beginPath();
+      context.arc(x, y, size, 0, Math.PI * 2);
+      context.fill();
+    }
+    
+    texture.update();
+    texture.wrapU = Texture.WRAP_ADDRESSMODE;
+    texture.wrapV = Texture.WRAP_ADDRESSMODE;
+    texture.uScale = 2;
+    texture.vScale = 2;
+    
+    return texture;
   }
 
   purchaseAnimal(animalType: AnimalType, position: Vector3): boolean {
@@ -264,6 +418,10 @@ export class LivestockSystem {
   }
 
   update(): void {
+    if (!this.timeSystem) {
+      return; // Skip update if timeSystem is not available
+    }
+    
     const timeData = this.timeSystem.getTimeData();
     
     this.animals.forEach(animal => {

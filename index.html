@@ -10,73 +10,91 @@
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui">
-      <div id="hud-top" class="absolute top-5 left-5 min-w-[300px] bg-black/70 border-2 border-slate-700 rounded-lg p-3 pointer-events-auto">
-        <h3 class="text-lg font-bold mb-2">Farm Status</h3>
-        <div class="flex justify-between my-1 text-sm">
-          <span>Money:</span>
-          <span id="money">$10,000</span>
+      <div id="hud-top" class="ui-panel absolute top-4 left-4 w-80 bg-black/90 border-2 border-slate-600 rounded-xl p-4 pointer-events-auto shadow-xl z-10">
+        <h3 class="text-xl font-bold mb-4 text-white border-b border-slate-500 pb-2">Farm Status</h3>
+        
+        <!-- Financial Section -->
+        <div class="mb-4">
+          <div class="flex justify-between items-center py-2 px-3 bg-green-900/30 rounded-lg border border-green-700/50">
+            <span class="text-sm font-medium text-green-200">Money:</span>
+            <span id="money" class="text-lg font-bold text-green-400">$10,000</span>
+          </div>
         </div>
-        <div class="flex justify-between my-1 text-sm">
-          <span>Time:</span>
-          <span id="time">6:00 AM</span>
+
+        <!-- Time & Environment Section -->
+        <div class="mb-4 space-y-2">
+          <h4 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Environment</h4>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="flex justify-between py-1.5 px-2 bg-slate-800/50 rounded">
+              <span class="text-xs text-slate-400">Time:</span>
+              <span id="time" class="text-xs font-medium text-white">6:00 AM</span>
+            </div>
+            <div class="flex justify-between py-1.5 px-2 bg-slate-800/50 rounded">
+              <span class="text-xs text-slate-400">Season:</span>
+              <span id="season" class="text-xs font-medium text-white">Spring</span>
+            </div>
+          </div>
+          <div class="flex justify-between py-1.5 px-2 bg-slate-800/50 rounded">
+            <span class="text-xs text-slate-400">Weather:</span>
+            <span id="weather" class="text-xs font-medium text-white">Sunny</span>
+          </div>
         </div>
-        <div class="flex justify-between my-1 text-sm">
-          <span>Season:</span>
-          <span id="season">Spring</span>
-        </div>
-        <div class="flex justify-between my-1 text-sm">
-          <span>Weather:</span>
-          <span id="weather">Sunny</span>
-        </div>
-        <div class="flex justify-between my-1 text-sm">
-          <span>Crops:</span>
-          <span id="crops">0 planted</span>
-        </div>
-        <div class="flex justify-between my-1 text-sm">
-          <span>Inventory:</span>
-          <span id="inventory">Empty</span>
-        </div>
-        <div class="flex justify-between my-1 text-sm">
-          <span>Livestock:</span>
-          <span id="livestock">No animals</span>
+
+        <!-- Farm Progress Section -->
+        <div class="space-y-2">
+          <h4 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Progress</h4>
+          <div class="flex justify-between py-1.5 px-2 bg-slate-800/50 rounded">
+            <span class="text-xs text-slate-400">Crops:</span>
+            <span id="crops" class="text-xs font-medium text-white">0 planted</span>
+          </div>
+          <div class="flex justify-between py-1.5 px-2 bg-slate-800/50 rounded">
+            <span class="text-xs text-slate-400">Inventory:</span>
+            <span id="inventory" class="text-xs font-medium text-white">Empty</span>
+          </div>
+          <div class="flex justify-between py-1.5 px-2 bg-slate-800/50 rounded">
+            <span class="text-xs text-slate-400">Livestock:</span>
+            <span id="livestock" class="text-xs font-medium text-white">No animals</span>
+          </div>
         </div>
       </div>
 
-      <div id="build-mode-status" class="absolute top-5 right-5 min-w-[150px] bg-black/70 border-2 border-slate-700 rounded-lg p-3 pointer-events-auto hidden">
-        <h3 class="text-lg font-bold mb-2">Build Mode</h3>
-        <div id="build-mode-text" class="text-sm">OFF</div>
+      <div id="build-mode-status" class="absolute top-4 right-4 w-48 bg-black/90 border-2 border-slate-600 rounded-xl p-4 pointer-events-auto shadow-xl backdrop-blur-sm z-20 hidden">
+        <h3 class="text-lg font-bold mb-3 text-white border-b border-slate-500 pb-2">Build Mode</h3>
+        <div id="build-mode-text" class="text-sm text-slate-300 font-medium">OFF</div>
       </div>
 
-      <div id="building-selection-panel" class="absolute bottom-5 left-1/2 -translate-x-1/2 bg-black/70 border-2 border-slate-700 rounded-lg p-3 pointer-events-auto hidden">
-        <h3 class="text-lg font-bold mb-2">Select Building</h3>
-        <div id="building-list" class="flex gap-2"></div>
+      <div id="building-selection-panel" class="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/90 border-2 border-slate-600 rounded-xl p-4 pointer-events-auto shadow-xl backdrop-blur-sm z-20 hidden">
+        <h3 class="text-lg font-bold mb-3 text-white border-b border-slate-500 pb-2">Select Building</h3>
+        <div id="building-list" class="flex gap-3"></div>
       </div>
 
-      <div id="hud-bottom" class="absolute bottom-5 right-5 min-w-[200px] bg-black/70 border-2 border-slate-700 rounded-lg p-3 pointer-events-auto">
-        <h3 class="text-lg font-bold mb-2">Controls</h3>
-        <div class="text-xs">
-          <div>WASD - Move</div>
-          <div>Mouse - Look Around</div>
-          <div>Space - Plant/Harvest</div>
-          <div>1-4 - Select Crop</div>
-          <div>R - Sell All Crops</div>
-          <div>E - Enter Vehicle</div>
-          <div>S - Shop</div>
-          <div>B - Build Mode</div>
-          <div>L - Animal Mode</div>
-          <div>F - Feed Animals</div>
-          <div>C - Collect Products</div>
-          <div>ESC - Pause Game</div>
+      <div id="hud-bottom" class="ui-panel absolute top-4 left-[22rem] w-64 bg-black/90 border-2 border-slate-600 rounded-xl p-4 pointer-events-auto shadow-xl z-10">
+        <h3 class="text-lg font-bold mb-3 text-white border-b border-slate-500 pb-2">Controls</h3>
+        <div class="space-y-1 text-xs text-slate-300">
+          <div class="grid grid-cols-2 gap-2">
+            <div>WASD - Move</div>
+            <div>Mouse - Look</div>
+            <div>Space - Plant/Harvest</div>
+            <div>1-4 - Select Crop</div>
+            <div>R - Sell All</div>
+            <div>E - Vehicle</div>
+            <div>P - Shop</div>
+            <div>B - Build Mode</div>
+            <div>L - Animal Mode</div>
+            <div>F - Feed Animals</div>
+            <div>C - Collect Products</div>
+            <div>ESC - Pause</div>
+          </div>
         </div>
-        <div class="mt-2 text-[11px]">
-          <div>Selected: <span id="selected-crop">Wheat</span></div>
+        <div class="mt-3 pt-2 border-t border-slate-600">
+          <div class="text-xs text-slate-400">Selected: <span id="selected-crop" class="text-white font-medium">Wheat</span></div>
         </div>
       </div>
 
-      <div id="plot-info" class="absolute bottom-5 left-1/2 -translate-x-1/2 bg-black/70 border-2 border-slate-700 rounded-lg p-3 pointer-events-auto hidden">
-        <div id="plot-name" class="text-lg font-bold"></div>
-        <div id="plot-price" class="text-base"></div>
-        <div class="text-xs mt-2">Press 'E' to buy</div>
+      <div id="plot-info" class="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/90 border-2 border-slate-600 rounded-xl p-4 pointer-events-auto shadow-xl backdrop-blur-sm z-20 hidden">
+        <div id="plot-name" class="text-lg font-bold text-white mb-2"></div>
+        <div id="plot-price" class="text-base text-slate-300 mb-3"></div>
+        <div class="text-xs text-slate-400 border-t border-slate-600 pt-2">Press 'E' to buy</div>
       </div>
 
       <div id="loading" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-2xl">Loading Farming Simulator...</div>

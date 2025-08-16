@@ -121,6 +121,15 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Prettier for consistent code formatting - use `npm run format` before commits
 - Unused variables/parameters prefixed with `_` if required by architecture
 
+### UI and Styling
+
+- **Tailwind CSS**: Complete utility-first CSS framework for UI components
+- **Responsive Design**: Uses Tailwind responsive utilities and viewport units
+- **Fullscreen Canvas**: Game canvas fills entire viewport (100vw x 100vh)
+- **Overlay UI**: Absolute positioned UI elements with pointer-events control
+- **Color Scheme**: Dark theme with transparency and consistent color palette
+- **Typography**: System font stack with size utilities from Tailwind
+
 ### Performance Considerations
 
 - Instanced meshes for crop rendering efficiency
