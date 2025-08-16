@@ -16,6 +16,7 @@ import { WeatherSystem } from '../systems/WeatherSystem';
 import { CropSystem } from '../systems/CropSystem';
 import { EconomySystem } from '../systems/EconomySystem';
 import { VehicleSystem } from '../systems/VehicleSystem';
+import { EquipmentSystem } from '../systems/EquipmentSystem';
 import { UIManager } from '../ui/UIManager';
 
 export class Game {
@@ -29,6 +30,7 @@ export class Game {
   private cropSystem!: CropSystem;
   private economySystem!: EconomySystem;
   private vehicleSystem!: VehicleSystem;
+  private equipmentSystem!: EquipmentSystem;
   private uiManager!: UIManager;
   private audioManager!: AudioManager;
   private isPaused: boolean = false;
@@ -103,6 +105,7 @@ export class Game {
     this.weatherSystem = new WeatherSystem(this.scene);
     this.economySystem = new EconomySystem();
     this.vehicleSystem = new VehicleSystem(this.scene);
+    this.equipmentSystem = new EquipmentSystem();
     this.cropSystem = new CropSystem(this.scene, this.timeSystem);
     this.audioManager = new AudioManager();
     this.inputManager = new InputManager(
@@ -117,7 +120,8 @@ export class Game {
       this.timeSystem,
       this.weatherSystem,
       this.cropSystem,
-      this.economySystem
+      this.economySystem,
+      this.equipmentSystem
     );
 
     this.sceneManager.initialize();
@@ -127,6 +131,7 @@ export class Game {
     this.weatherSystem.initialize();
     this.economySystem.initialize();
     this.vehicleSystem.initialize();
+    this.equipmentSystem.initialize();
     this.cropSystem.initialize();
     this.uiManager.initialize();
 
@@ -139,6 +144,10 @@ export class Game {
 
     this.inputManager.setPauseCallback(() => {
       this.togglePause();
+    });
+
+    this.inputManager.setShopCallback(() => {
+      this.uiManager.toggleShop();
     });
   }
 
@@ -334,6 +343,22 @@ export class Game {
 
   getAudioManager(): AudioManager {
     return this.audioManager;
+  }
+
+  purchaseEquipment(equipmentId: string): boolean {
+    const equipment = this.equipmentSystem.getAllEquipment().find(e => e.id === equipmentId);
+    if (!equipment || equipment.owned) {
+      return false;
+    }
+
+    if (this.economySystem.getMoney() >= equipment.price) {
+      this.economySystem.setMoney(this.economySystem.getMoney() - equipment.price);
+      this.equipmentSystem.purchaseEquipment(equipmentId);
+      this.audioManager.playSound('economy_buy');
+      return true;
+    }
+
+    return false;
   }
 
   start(): void {

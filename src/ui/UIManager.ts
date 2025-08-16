@@ -2,28 +2,35 @@ import { TimeSystem } from '../systems/TimeSystem';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { CropSystem, CropType } from '../systems/CropSystem';
 import { EconomySystem } from '../systems/EconomySystem';
+import { EquipmentSystem, Equipment } from '../systems/EquipmentSystem';
 
 export class UIManager {
   private timeSystem: TimeSystem;
   private weatherSystem: WeatherSystem;
   private cropSystem: CropSystem;
   private economySystem: EconomySystem;
+  private equipmentSystem: EquipmentSystem;
+  private isShopOpen: boolean = false;
+  private currentShopCategory: number = 0;
 
   constructor(
     timeSystem: TimeSystem,
     weatherSystem: WeatherSystem,
     cropSystem: CropSystem,
-    economySystem: EconomySystem
+    economySystem: EconomySystem,
+    equipmentSystem: EquipmentSystem
   ) {
     this.timeSystem = timeSystem;
     this.weatherSystem = weatherSystem;
     this.cropSystem = cropSystem;
     this.economySystem = economySystem;
+    this.equipmentSystem = equipmentSystem;
   }
 
   initialize(): void {
     this.updateUI();
     this.setupPauseScreen();
+    this.setupShop();
     console.log('UI Manager initialized');
   }
 
@@ -211,5 +218,136 @@ export class UIManager {
         saveMessage.style.opacity = '0';
       }
     }, 2000);
+  }
+
+  private setupShop(): void {
+    const shopClose = document.getElementById('shop-close');
+    if (shopClose) {
+      shopClose.addEventListener('click', () => {
+        (window as any).game?.getAudioManager()?.playSound('interaction_click');
+        this.toggleShop();
+      });
+    }
+
+    // Setup category tabs
+    const categoryTabs = document.querySelectorAll('.category-tab');
+    categoryTabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => {
+        (window as any).game?.getAudioManager()?.playSound('interaction_click');
+        this.switchCategory(index);
+      });
+    });
+
+    this.updateShop();
+  }
+
+  toggleShop(): void {
+    this.isShopOpen = !this.isShopOpen;
+    const shopScreen = document.getElementById('shop-screen');
+    if (shopScreen) {
+      shopScreen.style.display = this.isShopOpen ? 'block' : 'none';
+      if (this.isShopOpen) {
+        this.updateShop();
+      }
+    }
+  }
+
+  private switchCategory(categoryIndex: number): void {
+    this.currentShopCategory = categoryIndex;
+
+    // Update tab appearance
+    const tabs = document.querySelectorAll('.category-tab');
+    tabs.forEach((tab, index) => {
+      if (index === categoryIndex) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    this.updateShopItems();
+  }
+
+  private updateShop(): void {
+    this.updateShopMoney();
+    this.updateShopItems();
+  }
+
+  private updateShopMoney(): void {
+    const shopMoney = document.getElementById('shop-money');
+    if (shopMoney) {
+      shopMoney.textContent = this.economySystem.getMoney().toLocaleString();
+    }
+  }
+
+  private updateShopItems(): void {
+    const equipmentGrid = document.getElementById('equipment-grid');
+    if (!equipmentGrid) return;
+
+    const categories = this.equipmentSystem.getEquipmentByCategory();
+    const currentCategory = categories[this.currentShopCategory];
+    
+    if (!currentCategory) return;
+
+    equipmentGrid.innerHTML = '';
+
+    currentCategory.items.forEach(equipment => {
+      const card = this.createEquipmentCard(equipment);
+      equipmentGrid.appendChild(card);
+    });
+  }
+
+  private createEquipmentCard(equipment: Equipment): HTMLElement {
+    const card = document.createElement('div');
+    card.className = `equipment-card ${equipment.owned ? 'owned' : ''}`;
+
+    const effectsHtml = Object.entries(equipment.effects)
+      .map(([key, value]) => {
+        if (value === undefined) return '';
+        const formattedKey = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+        const formattedValue = typeof value === 'number' 
+          ? (key.includes('Speed') || key.includes('Yield') || key.includes('Efficiency') || key.includes('Rate'))
+            ? `+${Math.round((value - 1) * 100)}%`
+            : `+${value.toLocaleString()}`
+          : value;
+        return `<div class="equipment-effect">• ${formattedKey}: ${formattedValue}</div>`;
+      })
+      .filter(html => html !== '')
+      .join('');
+
+    const canAfford = this.economySystem.getMoney() >= equipment.price;
+    
+    card.innerHTML = `
+      <div class="equipment-name">${equipment.name}</div>
+      <div class="equipment-description">${equipment.description}</div>
+      <div class="equipment-effects">${effectsHtml}</div>
+      <div class="equipment-price">$${equipment.price.toLocaleString()}</div>
+      ${equipment.owned 
+        ? '<button class="equipment-owned">Owned</button>'
+        : `<button class="equipment-buy" ${!canAfford ? 'disabled' : ''} data-equipment-id="${equipment.id}">
+             ${canAfford ? 'Buy' : 'Not enough money'}
+           </button>`
+      }
+    `;
+
+    // Add buy button event listener
+    const buyButton = card.querySelector('.equipment-buy');
+    if (buyButton && !equipment.owned && canAfford) {
+      buyButton.addEventListener('click', () => {
+        this.purchaseEquipment(equipment.id);
+      });
+    }
+
+    return card;
+  }
+
+  private purchaseEquipment(equipmentId: string): void {
+    const success = (window as any).game?.purchaseEquipment(equipmentId);
+    if (success) {
+      this.updateShop();
+      this.showSaveMessage('Equipment Purchased!');
+    } else {
+      this.showSaveMessage('Purchase Failed!');
+    }
   }
 }

@@ -18,6 +18,7 @@ export class InputManager {
   private currentCropType: CropType = 'wheat';
   private onCropSelectionChange?: (cropType: CropType) => void;
   private onPause?: () => void;
+  private onShop?: () => void;
 
   constructor(
     scene: Scene,
@@ -93,6 +94,13 @@ export class InputManager {
         case 'KeyR':
           if (kbInfo.type === 1) {
             this.sellAllCrops();
+          }
+          break;
+        case 'KeyS':
+          if (kbInfo.type === 1) {
+            if (this.onShop) {
+              this.onShop();
+            }
           }
           break;
         case 'Digit1':
@@ -268,6 +276,10 @@ export class InputManager {
 
   setPauseCallback(callback: () => void): void {
     this.onPause = callback;
+  }
+
+  setShopCallback(callback: () => void): void {
+    this.onShop = callback;
   }
 
   private sellAllCrops(): void {
