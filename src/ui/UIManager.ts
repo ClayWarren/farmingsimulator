@@ -169,15 +169,15 @@ export class UIManager {
     if (loadButton) {
       const hasSave = (window as any).game?.hasSaveData();
       loadButton.disabled = !hasSave;
-      loadButton.style.opacity = hasSave ? '1' : '0.5';
-      loadButton.style.cursor = hasSave ? 'pointer' : 'not-allowed';
+      loadButton.classList.toggle('opacity-50', !hasSave);
+      loadButton.classList.toggle('cursor-not-allowed', !hasSave);
     }
   }
 
   setPauseState(isPaused: boolean): void {
     const pauseScreen = document.getElementById('pause-screen');
     if (pauseScreen) {
-      pauseScreen.style.display = isPaused ? 'flex' : 'none';
+      pauseScreen.classList.toggle('hidden', !isPaused);
       if (isPaused) {
         this.updateLoadButtonState();
       }
@@ -190,32 +190,17 @@ export class UIManager {
     if (!saveMessage) {
       saveMessage = document.createElement('div');
       saveMessage.id = 'save-message';
-      saveMessage.style.cssText = `
-        position: absolute;
-        top: 100px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 12px 24px;
-        border-radius: 6px;
-        font-size: 16px;
-        font-weight: bold;
-        z-index: 200;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      `;
+      saveMessage.className = 'absolute top-24 left-1/2 -translate-x-1/2 bg-black/80 text-white py-3 px-6 rounded-md text-base font-bold z-[200] pointer-events-none opacity-0 transition-opacity duration-300';
       document.body.appendChild(saveMessage);
     }
 
     saveMessage.textContent = message;
-    saveMessage.style.opacity = '1';
+    saveMessage.classList.remove('opacity-0');
 
     // Hide after 2 seconds
     setTimeout(() => {
       if (saveMessage) {
-        saveMessage.style.opacity = '0';
+        saveMessage.classList.add('opacity-0');
       }
     }, 2000);
   }
@@ -245,7 +230,7 @@ export class UIManager {
     this.isShopOpen = !this.isShopOpen;
     const shopScreen = document.getElementById('shop-screen');
     if (shopScreen) {
-      shopScreen.style.display = this.isShopOpen ? 'block' : 'none';
+      shopScreen.classList.toggle('hidden', !this.isShopOpen);
       if (this.isShopOpen) {
         this.updateShop();
       }
@@ -258,11 +243,12 @@ export class UIManager {
     // Update tab appearance
     const tabs = document.querySelectorAll('.category-tab');
     tabs.forEach((tab, index) => {
-      if (index === categoryIndex) {
-        tab.classList.add('active');
-      } else {
-        tab.classList.remove('active');
-      }
+      const isActive = index === categoryIndex;
+      tab.classList.toggle('active', isActive);
+      tab.classList.toggle('bg-blue-600', isActive);
+      tab.classList.toggle('text-white', isActive);
+      tab.classList.toggle('bg-slate-700', !isActive);
+      tab.classList.toggle('text-slate-400', !isActive);
     });
 
     this.updateShopItems();
@@ -299,7 +285,7 @@ export class UIManager {
 
   private createEquipmentCard(equipment: Equipment): HTMLElement {
     const card = document.createElement('div');
-    card.className = `equipment-card ${equipment.owned ? 'owned' : ''}`;
+    card.className = `bg-slate-900/80 border-2 border-slate-700 rounded-lg p-5 transition-all hover:border-blue-600 hover:-translate-y-1 ${equipment.owned ? 'border-green-600 bg-green-900/20' : ''}`;
 
     const effectsHtml = Object.entries(equipment.effects)
       .map(([key, value]) => {
@@ -310,7 +296,7 @@ export class UIManager {
             ? `+${Math.round((value - 1) * 100)}%`
             : `+${value.toLocaleString()}`
           : value;
-        return `<div class="equipment-effect">• ${formattedKey}: ${formattedValue}</div>`;
+        return `<div class="text-xs text-slate-400 my-1">• ${formattedKey}: ${formattedValue}</div>`;
       })
       .filter(html => html !== '')
       .join('');
@@ -318,20 +304,20 @@ export class UIManager {
     const canAfford = this.economySystem.getMoney() >= equipment.price;
     
     card.innerHTML = `
-      <div class="equipment-name">${equipment.name}</div>
-      <div class="equipment-description">${equipment.description}</div>
-      <div class="equipment-effects">${effectsHtml}</div>
-      <div class="equipment-price">$${equipment.price.toLocaleString()}</div>
+      <div class="text-lg font-bold text-slate-100 mb-2">${equipment.name}</div>
+      <div class="text-sm text-slate-300 mb-3 leading-snug">${equipment.description}</div>
+      <div class="mb-4">${effectsHtml}</div>
+      <div class="text-base font-bold text-amber-400 mb-3">${equipment.price.toLocaleString()}</div>
       ${equipment.owned 
-        ? '<button class="equipment-owned">Owned</button>'
-        : `<button class="equipment-buy" ${!canAfford ? 'disabled' : ''} data-equipment-id="${equipment.id}">
+        ? '<button class="w-full py-2 bg-green-600 text-white rounded-md text-sm font-bold cursor-default">Owned</button>'
+        : `<button class="w-full py-2 bg-green-700 text-white rounded-md text-sm font-bold transition-colors hover:bg-green-600 disabled:bg-slate-600 disabled:cursor-not-allowed" ${!canAfford ? 'disabled' : ''} data-equipment-id="${equipment.id}">
              ${canAfford ? 'Buy' : 'Not enough money'}
            </button>`
       }
     `;
 
     // Add buy button event listener
-    const buyButton = card.querySelector('.equipment-buy');
+    const buyButton = card.querySelector('button[data-equipment-id]');
     if (buyButton && !equipment.owned && canAfford) {
       buyButton.addEventListener('click', () => {
         this.purchaseEquipment(equipment.id);

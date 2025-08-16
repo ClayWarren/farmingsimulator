@@ -1,4 +1,5 @@
 import { CropType } from './CropSystem';
+import { EquipmentSystem } from './EquipmentSystem';
 
 export interface InventoryItem {
   type: CropType;
@@ -26,6 +27,7 @@ export class EconomySystem {
   private seedPrices!: SeedPrices;
   private lastPriceUpdate: number = 0;
   private priceUpdateInterval: number = 300;
+  private equipmentSystem?: EquipmentSystem;
 
   constructor() {
     this.initializeInventory();
@@ -34,6 +36,10 @@ export class EconomySystem {
 
   initialize(): void {
     console.log('Economy system initialized');
+  }
+
+  setEquipmentSystem(equipmentSystem: EquipmentSystem): void {
+    this.equipmentSystem = equipmentSystem;
   }
 
   private initializeInventory(): void {
@@ -119,10 +125,26 @@ export class EconomySystem {
     }
   }
 
-  addToInventory(cropType: CropType, quantity: number): void {
+  addToInventory(cropType: CropType, quantity: number): boolean {
     const currentQuantity = this.inventory.get(cropType) || 0;
+    const totalInventoryItems = this.getTotalInventoryCount();
+    const storageCapacity = this.getStorageCapacity();
+    
+    if (totalInventoryItems + quantity > storageCapacity) {
+      const availableSpace = storageCapacity - totalInventoryItems;
+      if (availableSpace > 0) {
+        this.inventory.set(cropType, currentQuantity + availableSpace);
+        console.log(`Added ${availableSpace} ${cropType}(s) to inventory (storage full)`);
+        return false; // Partial storage
+      } else {
+        console.log(`Cannot add ${cropType}(s) - storage full (${totalInventoryItems}/${storageCapacity})`);
+        return false; // No storage space
+      }
+    }
+    
     this.inventory.set(cropType, currentQuantity + quantity);
-    console.log(`Added ${quantity} ${cropType}(s) to inventory`);
+    console.log(`Added ${quantity} ${cropType}(s) to inventory (${totalInventoryItems + quantity}/${storageCapacity})`);
+    return true; // Full storage successful
   }
 
   getMoney(): number {
@@ -167,6 +189,30 @@ export class EconomySystem {
 
   getNetWorth(): number {
     return this.money + this.getTotalInventoryValue();
+  }
+
+  getTotalInventoryCount(): number {
+    let total = 0;
+    this.inventory.forEach(quantity => {
+      total += quantity;
+    });
+    return total;
+  }
+
+  getStorageCapacity(): number {
+    const baseCapacity = 500;
+    if (!this.equipmentSystem) {
+      return baseCapacity;
+    }
+    const equipmentEffects = this.equipmentSystem.getEquipmentEffects();
+    return baseCapacity + (equipmentEffects.storageCapacity || 0);
+  }
+
+  getStorageInfo(): { used: number; capacity: number; percentage: number } {
+    const used = this.getTotalInventoryCount();
+    const capacity = this.getStorageCapacity();
+    const percentage = capacity > 0 ? (used / capacity) * 100 : 0;
+    return { used, capacity, percentage };
   }
 
   canAffordSeeds(cropType: CropType, quantity: number = 1): boolean {

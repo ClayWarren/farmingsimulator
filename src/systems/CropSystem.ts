@@ -8,6 +8,7 @@ import {
   InstancedMesh,
 } from '@babylonjs/core';
 import { TimeSystem, TimeData } from './TimeSystem';
+import { EquipmentSystem } from './EquipmentSystem';
 
 export type CropType = 'wheat' | 'corn' | 'potato' | 'carrot';
 
@@ -31,6 +32,7 @@ export interface CropInfo {
 export class CropSystem {
   private scene: Scene;
   private timeSystem: TimeSystem;
+  private equipmentSystem: EquipmentSystem;
   private crops: Map<string, CropData> = new Map();
   private cropTemplates: Map<CropType, Mesh> = new Map();
 
@@ -65,9 +67,10 @@ export class CropSystem {
     },
   };
 
-  constructor(scene: Scene, timeSystem: TimeSystem) {
+  constructor(scene: Scene, timeSystem: TimeSystem, equipmentSystem: EquipmentSystem) {
     this.scene = scene;
     this.timeSystem = timeSystem;
+    this.equipmentSystem = equipmentSystem;
   }
 
   initialize(): void {
@@ -152,12 +155,17 @@ export class CropSystem {
 
     this.crops.delete(key);
 
-    const amount = Math.floor(Math.random() * 3) + 2;
-    console.log(`Harvested ${crop.type}, got ${amount} units`);
+    // Apply equipment effects to yield
+    const equipmentEffects = this.equipmentSystem.getEquipmentEffects();
+    const baseAmount = Math.floor(Math.random() * 3) + 2;
+    const modifiedAmount = Math.floor(baseAmount * (equipmentEffects.cropYield || 1.0));
+    const finalAmount = Math.max(1, modifiedAmount);
+    
+    console.log(`Harvested ${crop.type}, got ${finalAmount} units (base: ${baseAmount}, yield bonus: ${((equipmentEffects.cropYield || 1.0) - 1) * 100}%)`);
 
     return {
       type: crop.type,
-      amount: amount,
+      amount: finalAmount,
     };
   }
 

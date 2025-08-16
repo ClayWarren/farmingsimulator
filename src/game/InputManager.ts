@@ -2,6 +2,7 @@ import { Scene, FreeCamera, Vector3, Ray } from '@babylonjs/core';
 import { CropSystem, CropType } from '../systems/CropSystem';
 import { EconomySystem } from '../systems/EconomySystem';
 import { VehicleSystem } from '../systems/VehicleSystem';
+import { EquipmentSystem } from '../systems/EquipmentSystem';
 import { AudioManager } from '../audio/AudioManager';
 
 export class InputManager {
@@ -11,11 +12,13 @@ export class InputManager {
   private cropSystem: CropSystem;
   private economySystem: EconomySystem;
   private vehicleSystem: VehicleSystem;
+  private equipmentSystem: EquipmentSystem;
   private audioManager: AudioManager;
   private keys: { [key: string]: boolean } = {};
   private moveSpeed = 20;
   private isPointerLocked = false;
   private currentCropType: CropType = 'wheat';
+  private lastInteractionTime = 0;
   private onCropSelectionChange?: (cropType: CropType) => void;
   private onPause?: () => void;
   private onShop?: () => void;
@@ -26,6 +29,7 @@ export class InputManager {
     cropSystem: CropSystem,
     economySystem: EconomySystem,
     vehicleSystem: VehicleSystem,
+    equipmentSystem: EquipmentSystem,
     audioManager: AudioManager
   ) {
     this.scene = scene;
@@ -33,6 +37,7 @@ export class InputManager {
     this.cropSystem = cropSystem;
     this.economySystem = economySystem;
     this.vehicleSystem = vehicleSystem;
+    this.equipmentSystem = equipmentSystem;
     this.audioManager = audioManager;
     this.camera = scene.activeCamera as FreeCamera;
   }
@@ -137,6 +142,17 @@ export class InputManager {
   }
 
   private handleInteraction(): void {
+    // Apply equipment speed effects for interaction timing
+    const currentTime = Date.now();
+    const equipmentEffects = this.equipmentSystem.getEquipmentEffects();
+    const speedMultiplier = equipmentEffects.plantingSpeed || 1.0;
+    const baseInteractionDelay = 500; // 500ms base delay
+    const adjustedDelay = baseInteractionDelay / speedMultiplier;
+    
+    if (currentTime - this.lastInteractionTime < adjustedDelay) {
+      return; // Still in cooldown
+    }
+    
     const pickInfo = this.getGroundPickInfo();
     if (!pickInfo || !pickInfo.hit) {
       return;
@@ -150,13 +166,25 @@ export class InputManager {
     const existingCrop = this.cropSystem.getCropAt(gridPosition);
 
     if (existingCrop) {
+      // Apply harvest speed effects
+      const harvestSpeedMultiplier = equipmentEffects.harvestSpeed || 1.0;
+      const harvestDelay = baseInteractionDelay / harvestSpeedMultiplier;
+      
+      if (currentTime - this.lastInteractionTime < harvestDelay) {
+        return; // Still in harvest cooldown
+      }
+      
       const result = this.cropSystem.harvestCrop(gridPosition);
       if (result) {
         this.audioManager.playSound('interaction_harvest');
-        this.economySystem.addToInventory(result.type, result.amount);
+        const storageSuccess = this.economySystem.addToInventory(result.type, result.amount);
+        if (!storageSuccess) {
+          console.log('Storage is full! Consider buying more storage equipment.');
+        }
         console.log(
-          `Harvested ${result.amount} ${result.type}(s) and added to inventory`
+          `Harvested ${result.amount} ${result.type}(s) with ${((harvestSpeedMultiplier - 1) * 100).toFixed(0)}% speed bonus`
         );
+        this.lastInteractionTime = currentTime;
       } else {
         console.log('Crop is not ready for harvest yet');
       }
@@ -170,8 +198,9 @@ export class InputManager {
           if (success) {
             this.audioManager.playSound('interaction_plant');
             console.log(
-              `Bought seeds and planted ${this.currentCropType} at (${gridX}, ${gridZ})`
+              `Planted ${this.currentCropType} with ${((speedMultiplier - 1) * 100).toFixed(0)}% speed bonus at (${gridX}, ${gridZ})`
             );
+            this.lastInteractionTime = currentTime;
           } else {
             console.log('Cannot plant here');
           }

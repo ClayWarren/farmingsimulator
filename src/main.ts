@@ -1,3 +1,4 @@
+import './index.css';
 import { Game } from './game/Game';
 
 class FarmingSimulator {
