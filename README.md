@@ -245,7 +245,7 @@ src/
 - [x] ~~Equipment shop and purchasing interface~~
 - [x] ~~Save/load game state~~
 - [x] ~~Audio system and sound effects~~
-- [ ] Tool effects on farming efficiency
+- [x] ~~Tool effects on farming efficiency~~
 - [ ] Farm expansion and building system
 - [ ] Livestock management
 - [ ] Multiplayer farming

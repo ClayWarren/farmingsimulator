@@ -114,6 +114,7 @@ export class Game {
       this.cropSystem,
       this.economySystem,
       this.vehicleSystem,
+      this.equipmentSystem, // Pass the equipment system
       this.audioManager
     );
     this.uiManager = new UIManager(
