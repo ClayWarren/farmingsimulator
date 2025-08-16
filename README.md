@@ -19,11 +19,12 @@ A modern farming simulation game built with TypeScript and Babylon.js.
 - **WASD** - Move around the farm
 - **Mouse** - Look around (click to lock cursor)
 - **Shift** - Run faster
+- **T** - Till soil (prepare ground for planting)
 - **Space** - Interact/Plant/Harvest/Place Buildings/Animals
 - **E** - Vehicle interaction
 - **1-4** - Select crop types (wheat, corn, potato, carrot)
 - **R** - Sell all crops
-- **S** - Open equipment shop
+- **P** - Open equipment shop
 - **B** - Toggle building mode
 - **L** - Toggle animal mode
 - **F** - Feed all animals
@@ -84,6 +85,7 @@ src/
 │   ├── EquipmentSystem.ts    # Equipment shop and upgrades
 │   ├── BuildingSystem.ts     # Building placement and management
 │   ├── FarmExpansionSystem.ts # Land plot purchasing
+│   ├── FieldStateSystem.ts   # Visual field state changes
 │   └── LivestockSystem.ts    # Animal management and production
 ├── ui/
 │   └── UIManager.ts        # User interface management
@@ -120,6 +122,8 @@ src/
 - ✅ **Farm expansion system** with land plot purchasing and building placement
 - ✅ **Livestock management** with 4 animal types and full production cycles
 - ✅ **Weather effects on crops** with growth and yield modifiers
+- ✅ **Field state visualization** with dynamic ground textures showing farming progress
+- ✅ **Realistic tilling system** requiring soil preparation before planting
 
 ## Crop System Details
 
@@ -154,17 +158,18 @@ src/
 
 ### **Starting Resources**:
 
-- **Initial money**: $10,000 to begin your farming operation
+- **Initial money**: $100,000 to begin your farming operation
 - **Automatic purchasing**: Seeds bought automatically when planting (if affordable)
 - **Inventory tracking**: Real-time display of stored crops and their current values
 
 ## Vehicle System Details
 
-### **Farm Tractor**:
+### **Farm Vehicles**:
 
-- **Location**: Spawns near the farm fields
+- **Farm Tractor**: Green main farming vehicle for general operations
+- **Combine Harvester**: Large red harvesting vehicle with detailed components
 - **Controls**: Same WASD keys when inside vehicle
-- **Camera**: Dynamic third-person camera with smooth following
+- **Camera**: Dynamic third-person camera with smooth following and mouse look
 - **Speed**: Realistic acceleration and deceleration
 - **Turning**: Speed-dependent steering for authentic feel
 
@@ -174,59 +179,60 @@ src/
 
 1. **Movement**: Use WASD keys to move around the farm
 2. **Look around**: Move mouse to look around (click to lock cursor)
-3. **Select crops**: Press 1-4 to choose wheat, corn, potato, or carrot
-4. **Plant crops**: Aim at empty field areas and press Space (auto-buys seeds)
-5. **Wait for growth**: Crops progress through 4 growth stages over time
-6. **Harvest**: Press Space on fully grown crops to add to inventory
-7. **Pause game**: Press ESC to pause and access restart options
-8. **Shop access**: Press S to open equipment shop
+3. **Prepare soil**: Press T to till untilled ground (creates brown furrows)
+4. **Select crops**: Press 1-4 to choose wheat, corn, potato, or carrot
+5. **Plant crops**: Aim at tilled soil and press Space (auto-buys seeds)
+6. **Wait for growth**: Crops progress through 4 growth stages over time
+7. **Harvest**: Press Space on fully grown crops to add to inventory
+8. **Pause game**: Press ESC to pause and access restart options
+9. **Shop access**: Press P to open equipment shop
 
 ### **Economic Gameplay**:
 
-9. **Sell crops**: Press R to sell all harvested crops at current market prices
-10. **Monitor prices**: Watch for price fluctuations to maximize profits
-11. **Manage money**: Ensure sufficient funds for seeds and expansion
-12. **Buy equipment**: Visit shop to purchase tools, vehicles, storage, and processing equipment
+10. **Sell crops**: Press R to sell all harvested crops at current market prices
+11. **Monitor prices**: Watch for price fluctuations to maximize profits
+12. **Manage money**: Ensure sufficient funds for seeds and expansion
+13. **Buy equipment**: Visit shop to purchase tools, vehicles, storage, and processing equipment
 
 ### **Vehicle Operations**:
 
-13. **Enter tractor**: Walk near the green tractor and press E
-14. **Drive**: Use WASD to drive the tractor around the farm
-15. **Exit vehicle**: Press E again to exit and return to walking
+14. **Enter vehicles**: Walk near the green tractor or red combine harvester and press E
+15. **Drive**: Use WASD to drive vehicles around the farm
+16. **Exit vehicle**: Press E again to exit and return to walking
 
 ### **Equipment and Upgrades**:
 
-16. **Equipment shop**: Press S to browse and purchase equipment
-17. **Tool upgrades**: Buy better hoes for increased planting speed and yield
-18. **Vehicle upgrades**: Purchase advanced tractors and harvesters
-19. **Storage expansion**: Buy silos and warehouses for increased capacity
-20. **Processing equipment**: Invest in mills and processors for value-added products
+17. **Equipment shop**: Press P to browse and purchase equipment
+18. **Tool upgrades**: Buy better hoes for increased tilling, planting, and harvest speed
+19. **Vehicle upgrades**: Purchase advanced tractors and harvesters
+20. **Storage expansion**: Buy silos and warehouses for increased capacity
+21. **Processing equipment**: Invest in mills and processors for value-added products
 
 ### **Farm Expansion**:
 
-21. **Land purchase**: Buy additional land plots to expand your farming operation
-22. **Building placement**: Press B to enter building mode and place structures
-23. **Building types**: Fences, sheds, silos, and processing facilities
+22. **Land purchase**: Buy additional land plots to expand your farming operation
+23. **Building placement**: Press B to enter building mode and place structures
+24. **Building types**: Fences, sheds, silos, and processing facilities
 
 ### **Livestock Management**:
 
-24. **Animal mode**: Press L to enter animal placement mode
-25. **Animal types**: Purchase chickens, cows, pigs, and sheep
-26. **Animal care**: Press F to feed animals and maintain their health
-27. **Product collection**: Press C to collect eggs, milk, wool, and meat
-28. **Animal economics**: Each animal type has different costs, upkeep, and products
+25. **Animal mode**: Press L to enter animal placement mode
+26. **Animal types**: Purchase chickens, cows, pigs, and sheep
+27. **Animal care**: Press F to feed animals and maintain their health
+28. **Product collection**: Press C to collect eggs, milk, wool, and meat
+29. **Animal economics**: Each animal type has different costs, upkeep, and products
 
 ## Equipment Shop Details
 
 ### **Tools** (4 items):
 - **Basic Hoe**: Starting tool (free)
-- **Iron Hoe**: +50% planting speed, +30% harvest speed, +20% yield ($2,500)
-- **Steel Hoe**: +100% planting speed, +80% harvest speed, +50% yield ($8,000)
+- **Iron Hoe**: +50% tilling/planting speed, +30% harvest speed, +20% yield ($2,500)
+- **Steel Hoe**: +100% tilling/planting speed, +80% harvest speed, +50% yield ($8,000)
 - **Watering Can**: +10% crop yield ($1,200)
 - **Fertilizer Spreader**: +40% crop yield ($3,500)
 
 ### **Vehicles** (2 items):
-- **Advanced Tractor**: +80% planting/harvest speed, +50% fuel efficiency ($15,000)
+- **Advanced Tractor**: +80% tilling/planting/harvest speed, +50% fuel efficiency ($15,000)
 - **Combine Harvester**: +200% harvest speed, +30% yield ($35,000)
 
 ### **Storage** (3 items):
@@ -247,6 +253,7 @@ src/
 - **Weather audio**: Rain and storm sounds that change with weather
 
 ### **Interaction Sounds**:
+- **Tilling**: Soil preparation sound for ground breaking
 - **Planting**: Soft thud when planting crops
 - **Harvesting**: Rustling/cutting sound when collecting crops
 - **UI clicks**: Click feedback for all menu buttons
@@ -320,6 +327,32 @@ src/
 - **Real-time effects**: Weather changes impact crops immediately
 - **Console feedback**: Detailed logging shows weather bonuses
 
+## Field State System
+
+### **Visual Field States**:
+- **Untilled**: Natural grass with scattered vegetation patterns
+- **Tilled**: Brown soil with furrow lines showing prepared farmland
+- **Planted**: Dark soil with small seed dots indicating fresh planting
+- **Growing**: Mixed green/brown showing crops in development
+- **Mature**: Bright green vegetation ready for harvest
+- **Harvested**: Light green sparse vegetation after crop collection
+- **Stubble**: Golden post-harvest remnants that naturally decay
+
+### **Dynamic State Transitions**:
+- **Tilling workflow**: Must till soil before planting (T key creates tilled fields)
+- **Planting triggers**: Field state automatically updates when crops are planted on tilled soil
+- **Growth tracking**: State changes follow crop lifecycle stages
+- **Natural decay**: Harvested fields progress through stubble back to grass over 7 days
+- **Visual feedback**: Each state has unique procedural textures and colors
+- **Save persistence**: Field states are saved and restored with game data
+
+### **Realistic Farming Workflow**:
+- **Step 1**: Press T on untilled ground to create brown furrows (tilled state)
+- **Step 2**: Press Space on tilled soil to plant seeds (requires tilled ground)
+- **Step 3**: Wait for crops to grow through multiple visual stages
+- **Step 4**: Press Space on mature crops to harvest and return to harvested state
+- **Step 5**: Fields naturally decay: harvested → stubble → untilled over time
+
 ## Roadmap
 
 - [x] ~~Economic system with crop selling and money management~~
@@ -331,6 +364,8 @@ src/
 - [x] ~~Farm expansion and building system~~
 - [x] ~~Livestock management~~
 - [x] ~~Weather effects on crop yields~~
+- [x] ~~Field state visualization system~~
+- [x] ~~Realistic tilling mechanics~~
 - [ ] Multiplayer farming
 - [ ] Advanced farming equipment
 - [ ] Seasonal crop varieties

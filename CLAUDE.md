@@ -36,6 +36,7 @@ The game follows an **Entity-Component-System (ECS) inspired architecture** with
    - `BuildingSystem` - Building placement, collision detection, and management
    - `FarmExpansionSystem` - Land plot purchasing and ownership validation
    - `LivestockSystem` - Animal management, feeding, and product collection
+   - `FieldStateSystem` - Visual field state tracking and procedural textures
 3. **InputManager** - Handles player/vehicle controls and interactions
 4. **UIManager** - Real-time HUD updates, shop interface, and user interface
 5. **SceneManager** - 3D scene setup, terrain, and visual elements
@@ -47,7 +48,7 @@ The game follows an **Entity-Component-System (ECS) inspired architecture** with
 Systems must be initialized in this specific order due to dependencies:
 
 ```
-SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem → VehicleSystem → EquipmentSystem → FarmExpansionSystem → BuildingSystem → LivestockSystem → CropSystem → InputManager → UIManager
+SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem → VehicleSystem → EquipmentSystem → FarmExpansionSystem → BuildingSystem → LivestockSystem → CropSystem → FieldStateSystem → InputManager → UIManager
 ```
 
 ### Key Architectural Patterns
@@ -100,11 +101,12 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Dual-mode input: walking vs. vehicle controls using same WASD keys
 - Pointer lock for mouse look controls
 - Ray casting for ground interaction and crop placement
-- Keyboard shortcuts: 1-4 (crop selection), R (sell all), E (vehicle), S (shop), B (build mode), L (animal mode), F (feed animals), C (collect products), Space (plant/harvest/place), ESC (pause)
+- Keyboard shortcuts: 1-4 (crop selection), R (sell all), E (vehicle), P (shop), B (build mode), L (animal mode), F (feed animals), C (collect products), T (till soil), Space (plant/harvest/place), ESC (pause)
 - Pause system: ESC key toggles pause state with scene control management
-- Shop system: S key opens equipment shop with category navigation
+- Shop system: P key opens equipment shop with category navigation
 - Building system: B key toggles building mode with ghost preview and collision detection
 - Livestock system: L key toggles animal mode, F feeds all animals, C collects products
+- Tilling system: T key tills soil for planting, requires tilled ground before crop placement
 
 ## Development Guidelines
 
@@ -159,10 +161,11 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - **Processing**: Mills and processors for value-added crop processing
 
 ### **Equipment Effects**:
-- Multiplicative bonuses for planting speed, harvest speed, and crop yield
+- Multiplicative bonuses for tilling speed, planting speed, harvest speed, and crop yield
 - Additive bonuses for storage capacity
 - Equipment effects stack and combine for optimal efficiency
 - Real-time effect calculation and application
+- Tilling speed uses planting speed multipliers for equipment bonuses
 
 ## Save/Load System
 
@@ -180,6 +183,7 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Version control for save format compatibility
 - Error handling with graceful fallbacks
 - Automatic cleanup and memory management
+- Field state data: visual field states and state change timestamps
 
 ## Shop System
 
@@ -239,6 +243,40 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Console logging for debugging weather bonus calculations
 - Dynamic integration with existing TimeSystem and WeatherSystem
 
+## Field State System
+
+### **Visual Field States**:
+- Seven distinct field states: untilled, tilled, planted, growing, mature, harvested, stubble
+- Each state has unique procedural textures generated using Canvas 2D context
+- Grid-based field positioning matching crop placement system (2-unit spacing)
+- Dynamic state transitions based on farming activities and time progression
+
+### **State Management**:
+- Real-time field state tracking with Map<string, FieldData> storage
+- Position-based field identification using "x_z" key format
+- Integration with CropSystem for automatic state updates during crop lifecycle
+- Time-based field decay: harvested (2 days) → stubble (5 days) → untilled
+
+### **Visual Implementation**:
+- PBR material system with procedural albedo textures
+- Field meshes positioned slightly above ground (0.01y offset) to prevent z-fighting
+- Efficient mesh disposal and recreation for state changes
+- Performance-optimized texture generation using 128x128 Canvas textures
+
+### **Integration Points**:
+- Connected to InputManager for tilling, planting, and harvesting state updates
+- Integrated with save/load system for field state persistence
+- Synchronized with TimeSystem for state change timing
+- Updates triggered by crop growth stages in CropSystem update loop
+- Tilling validation prevents planting on untilled ground
+
+### **Tilling System Implementation**:
+- T key input handling in InputManager for soil preparation
+- Tilling timing affected by equipment speed bonuses (reuses planting speed multipliers)
+- Can only till untilled or stubble fields (prevents invalid operations)
+- Planting now requires tilled fields with helpful error messages
+- Enhanced tilled field textures with furrow lines, soil ridges, and clumps
+
 ### Extension Points
 
 - Add new crop types by extending CropType union and cropInfo record
@@ -254,3 +292,4 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Land plots configured in FarmExpansionSystem with bounds and pricing
 - Animal types added to LivestockSystem with costs, upkeep, and products
 - Weather effects customizable via growth and yield multiplier methods
+- Field states extended by adding new FieldState types and corresponding texture patterns

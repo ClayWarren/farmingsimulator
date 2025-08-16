@@ -171,6 +171,11 @@ export class InputManager {
             this.selectCrop('carrot');
           }
           break;
+        case 'KeyT':
+          if (kbInfo.type === 1) {
+            this.handleTilling();
+          }
+          break;
         case 'Escape':
           if (kbInfo.type === 1) {
             if (this.isPointerLocked) {
@@ -303,6 +308,14 @@ export class InputManager {
         console.log('Crop is not ready for harvest yet');
       }
     } else {
+      // Check if field is tilled before allowing planting
+      const currentFieldState = this.fieldStateSystem.getFieldState(gridPosition);
+      
+      if (currentFieldState !== 'tilled') {
+        console.log('Field must be tilled before planting! Press T to till the soil first.');
+        return;
+      }
+
       if (this.economySystem.canAffordSeeds(this.currentCropType)) {
         if (this.economySystem.buySeeds(this.currentCropType)) {
           const success = this.cropSystem.plantCrop(
@@ -697,6 +710,51 @@ export class InputManager {
     console.log('Collected products:', products);
   }
 
+
+  private handleTilling(): void {
+    const pickInfo = this.getGroundPickInfo();
+    if (!pickInfo || !pickInfo.hit || !pickInfo.pickedPoint) {
+      return;
+    }
+
+    const position = pickInfo.pickedPoint!;
+    const gridX = Math.round(position.x / 2) * 2;
+    const gridZ = Math.round(position.z / 2) * 2;
+    const gridPosition = new Vector3(gridX, 0, gridZ);
+
+    // Check if there's already a crop here
+    const existingCrop = this.cropSystem.getCropAt(gridPosition);
+    if (existingCrop) {
+      console.log('Cannot till here - crop already planted');
+      return;
+    }
+
+    // Get current field state
+    const currentState = this.fieldStateSystem.getFieldState(gridPosition);
+    
+    // Can only till untilled or stubble fields
+    if (currentState !== 'untilled' && currentState !== 'stubble' && currentState !== null) {
+      console.log('Field is already prepared or not ready for tilling');
+      return;
+    }
+
+    // Apply equipment speed effects for tilling timing
+    const currentTime = Date.now();
+    const equipmentEffects = this.equipmentSystem.getEquipmentEffects();
+    const speedMultiplier = equipmentEffects.plantingSpeed || 1.0; // Reuse planting speed for tilling
+    const baseTillingDelay = 300; // 300ms base delay for tilling
+    const adjustedDelay = baseTillingDelay / speedMultiplier;
+    
+    if (currentTime - this.lastInteractionTime < adjustedDelay) {
+      return; // Still in cooldown
+    }
+
+    // Till the field
+    this.fieldStateSystem.updateFieldState(gridPosition, 'tilled');
+    this.audioManager.playSound('interaction_plant'); // Reuse plant sound for now
+    console.log(`Tilled field at (${gridX}, ${gridZ}) with ${((speedMultiplier - 1) * 100).toFixed(0)}% speed bonus`);
+    this.lastInteractionTime = currentTime;
+  }
 
   private sellAllCrops(): void {
     const results = this.economySystem.sellAllCrops();

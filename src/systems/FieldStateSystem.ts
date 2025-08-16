@@ -225,11 +225,29 @@ export class FieldStateSystem {
   }
 
   private drawTilledPattern(context: CanvasRenderingContext2D): void {
-    // Draw furrow lines
-    for (let i = 0; i < 10; i++) {
-      const y = i * 12 + 6;
-      context.fillStyle = `rgba(${100 + Math.random() * 40}, ${60 + Math.random() * 30}, ${40 + Math.random() * 20}, 0.8)`;
-      context.fillRect(0, y, 128, 3);
+    // Draw prominent furrow lines with varied depths
+    for (let i = 0; i < 8; i++) {
+      const y = i * 16 + 8;
+      const depth = Math.random() * 2 + 2; // Variable furrow depth
+      
+      // Dark furrow shadow
+      context.fillStyle = `rgba(${60 + Math.random() * 20}, ${40 + Math.random() * 15}, ${25 + Math.random() * 15}, 0.9)`;
+      context.fillRect(0, y, 128, depth + 2);
+      
+      // Lighter soil ridge beside furrow
+      context.fillStyle = `rgba(${120 + Math.random() * 30}, ${80 + Math.random() * 20}, ${50 + Math.random() * 15}, 0.7)`;
+      context.fillRect(0, y + depth + 2, 128, 2);
+    }
+    
+    // Add some scattered soil clumps
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * 128;
+      const y = Math.random() * 128;
+      const size = Math.random() * 3 + 1;
+      context.fillStyle = `rgba(${90 + Math.random() * 40}, ${60 + Math.random() * 25}, ${35 + Math.random() * 20}, 0.6)`;
+      context.beginPath();
+      context.arc(x, y, size, 0, Math.PI * 2);
+      context.fill();
     }
   }
 
