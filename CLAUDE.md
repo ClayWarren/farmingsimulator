@@ -28,11 +28,14 @@ The game follows an **Entity-Component-System (ECS) inspired architecture** with
 1. **Game.ts** - Central orchestrator that initializes and coordinates all systems
 2. **Systems Directory** - Independent systems that handle specific game mechanics:
    - `TimeSystem` - Manages day/night cycles and seasonal progression
-   - `WeatherSystem` - Dynamic weather with visual effects
-   - `CropSystem` - Complete crop lifecycle (plant, grow, harvest)
+   - `WeatherSystem` - Dynamic weather with visual effects and crop integration
+   - `CropSystem` - Complete crop lifecycle with weather effects (plant, grow, harvest)
    - `EconomySystem` - Market prices, money, inventory management
    - `VehicleSystem` - Driveable tractor with physics and camera switching
    - `EquipmentSystem` - Equipment shop, ownership, and upgrade effects
+   - `BuildingSystem` - Building placement, collision detection, and management
+   - `FarmExpansionSystem` - Land plot purchasing and ownership validation
+   - `LivestockSystem` - Animal management, feeding, and product collection
 3. **InputManager** - Handles player/vehicle controls and interactions
 4. **UIManager** - Real-time HUD updates, shop interface, and user interface
 5. **SceneManager** - 3D scene setup, terrain, and visual elements
@@ -44,7 +47,7 @@ The game follows an **Entity-Component-System (ECS) inspired architecture** with
 Systems must be initialized in this specific order due to dependencies:
 
 ```
-SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem → VehicleSystem → EquipmentSystem → CropSystem → InputManager → UIManager
+SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem → VehicleSystem → EquipmentSystem → FarmExpansionSystem → BuildingSystem → LivestockSystem → CropSystem → InputManager → UIManager
 ```
 
 ### Key Architectural Patterns
@@ -74,7 +77,9 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Grid-based planting system with 2-unit spacing
 - Growth stages: 0 (seedling) → 1 (young) → 2 (mature) → 3 (harvestable)
 - Time-based growth affected by seasons and weather
+- Weather modifiers: Rain (+30% growth, +20% yield), Storms (-30% growth, -20% yield), Cloudy (+10% growth, +5% yield)
 - Visual scaling and color changes per growth stage
+- Equipment and weather effects combine multiplicatively for final yields
 
 ### Economy System
 
@@ -95,9 +100,11 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Dual-mode input: walking vs. vehicle controls using same WASD keys
 - Pointer lock for mouse look controls
 - Ray casting for ground interaction and crop placement
-- Keyboard shortcuts: 1-4 (crop selection), R (sell all), E (vehicle), S (shop), Space (plant/harvest), ESC (pause)
+- Keyboard shortcuts: 1-4 (crop selection), R (sell all), E (vehicle), S (shop), B (build mode), L (animal mode), F (feed animals), C (collect products), Space (plant/harvest/place), ESC (pause)
 - Pause system: ESC key toggles pause state with scene control management
 - Shop system: S key opens equipment shop with category navigation
+- Building system: B key toggles building mode with ghost preview and collision detection
+- Livestock system: L key toggles animal mode, F feeds all animals, C collects products
 
 ## Development Guidelines
 
@@ -178,6 +185,51 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Real-time money deduction and equipment ownership tracking
 - Save system integration for persistent equipment ownership
 
+## Farm Expansion System
+
+### **Land Plot Management**:
+- Three predefined land plots with different pricing and sizes
+- Ownership validation for all farming and building activities
+- Visual "For Sale" signs with plot information and pricing
+- Land purchase integration with economy system
+
+### **Building System Features**:
+- Grid-based building placement with 2-unit snapping
+- Collision detection prevents overlapping structures
+- Ghost building preview with validity indicators (green/red)
+- Building catalog with fences, sheds, and storage silos
+- Visual integration with SceneManager for 3D model loading
+- Fallback to primitive shapes if models fail to load
+
+## Livestock System
+
+### **Animal Management**:
+- Four animal types: chicken, cow, pig, sheep with distinct economics
+- Age progression system affecting production rates
+- Health and happiness metrics affecting animal productivity
+- Daily feeding requirements with upkeep costs
+- Product collection system (eggs, milk, meat, wool) with market values
+
+### **Economic Integration**:
+- Purchase costs: $50 (chicken) to $1,000 (cow)
+- Daily upkeep: $2 (chicken) to $15 (cow) per day
+- Product values: $5 (eggs) to $150 (meat)
+- Automatic product-to-revenue conversion on collection
+
+### **Visual System**:
+- Procedural animal representation using basic 3D shapes
+- Age-based scaling from 50% to 100% size
+- Health-based opacity changes (50% to 100%)
+- Instanced mesh system for performance optimization
+
+## Weather Integration
+
+### **Crop Growth Effects**:
+- Weather multipliers applied to growth calculations in real-time
+- Yield bonuses calculated during harvest combining equipment and weather effects
+- Console logging for debugging weather bonus calculations
+- Dynamic integration with existing TimeSystem and WeatherSystem
+
 ### Extension Points
 
 - Add new crop types by extending CropType union and cropInfo record
@@ -189,3 +241,7 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Equipment types added via EquipmentSystem catalog with effects and pricing
 - Audio sounds added via AudioManager procedural generation methods
 - Save data structure extensible via SaveManager interfaces
+- Building types added to BuildingSystem catalog with dimensions and effects
+- Land plots configured in FarmExpansionSystem with bounds and pricing
+- Animal types added to LivestockSystem with costs, upkeep, and products
+- Weather effects customizable via growth and yield multiplier methods

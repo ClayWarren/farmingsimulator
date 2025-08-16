@@ -19,11 +19,15 @@ A modern farming simulation game built with TypeScript and Babylon.js.
 - **WASD** - Move around the farm
 - **Mouse** - Look around (click to lock cursor)
 - **Shift** - Run faster
-- **Space** - Interact/Plant/Harvest
+- **Space** - Interact/Plant/Harvest/Place Buildings/Animals
 - **E** - Vehicle interaction
 - **1-4** - Select crop types (wheat, corn, potato, carrot)
 - **R** - Sell all crops
 - **S** - Open equipment shop
+- **B** - Toggle building mode
+- **L** - Toggle animal mode
+- **F** - Feed all animals
+- **C** - Collect animal products
 - **ESC** - Pause game (or release cursor if locked)
 
 ## Development
@@ -72,12 +76,15 @@ src/
 │   ├── SceneManager.ts     # 3D scene management
 │   └── InputManager.ts     # Input handling
 ├── systems/
-│   ├── TimeSystem.ts       # Time and season management
-│   ├── WeatherSystem.ts    # Weather simulation
-│   ├── CropSystem.ts       # Crop lifecycle management
-│   ├── EconomySystem.ts    # Market and inventory system
-│   ├── VehicleSystem.ts    # Vehicle physics and interaction
-│   └── EquipmentSystem.ts  # Equipment shop and upgrades
+│   ├── TimeSystem.ts         # Time and season management
+│   ├── WeatherSystem.ts      # Weather simulation with crop effects
+│   ├── CropSystem.ts         # Crop lifecycle with weather integration
+│   ├── EconomySystem.ts      # Market and inventory system
+│   ├── VehicleSystem.ts      # Vehicle physics and interaction
+│   ├── EquipmentSystem.ts    # Equipment shop and upgrades
+│   ├── BuildingSystem.ts     # Building placement and management
+│   ├── FarmExpansionSystem.ts # Land plot purchasing
+│   └── LivestockSystem.ts    # Animal management and production
 ├── ui/
 │   └── UIManager.ts        # User interface management
 └── main.ts                 # Application entry point
@@ -110,6 +117,9 @@ src/
 - ✅ **Save/load system** with complete game state persistence
 - ✅ **Procedural audio system** with ambient sounds, weather audio, and interaction feedback
 - ✅ **Equipment shop** with 13 purchasable items across 4 categories
+- ✅ **Farm expansion system** with land plot purchasing and building placement
+- ✅ **Livestock management** with 4 animal types and full production cycles
+- ✅ **Weather effects on crops** with growth and yield modifiers
 
 ## Crop System Details
 
@@ -126,6 +136,13 @@ src/
 2. **Young Plant** (25-50% growth)
 3. **Mature Plant** (50-75% growth)
 4. **Ready for Harvest** (75-100% growth)
+
+### Weather Effects:
+
+- **Rainy Weather**: +30% faster growth, +20% higher yield
+- **Stormy Weather**: -30% slower growth, -20% lower yield
+- **Cloudy Weather**: +10% faster growth, +5% higher yield
+- **Sunny Weather**: Normal growth and yield rates
 
 ## Economic System Details
 
@@ -185,6 +202,20 @@ src/
 19. **Storage expansion**: Buy silos and warehouses for increased capacity
 20. **Processing equipment**: Invest in mills and processors for value-added products
 
+### **Farm Expansion**:
+
+21. **Land purchase**: Buy additional land plots to expand your farming operation
+22. **Building placement**: Press B to enter building mode and place structures
+23. **Building types**: Fences, sheds, silos, and processing facilities
+
+### **Livestock Management**:
+
+24. **Animal mode**: Press L to enter animal placement mode
+25. **Animal types**: Purchase chickens, cows, pigs, and sheep
+26. **Animal care**: Press F to feed animals and maintain their health
+27. **Product collection**: Press C to collect eggs, milk, wool, and meat
+28. **Animal economics**: Each animal type has different costs, upkeep, and products
+
 ## Equipment Shop Details
 
 ### **Tools** (4 items):
@@ -238,6 +269,57 @@ src/
 - **Version control**: Save format versioning for future compatibility
 - **Error handling**: Graceful handling of save/load failures
 
+## Farm Expansion System Details
+
+### **Land Plot Management**:
+- **Starter Farmland**: Free starting plot (40x40 units)
+- **Northern Meadow**: $15,000 expansion plot (40x40 units)
+- **Western Fields**: $25,000 premium expansion plot (40x40 units)
+- **Ownership validation**: Can only plant/build on owned land
+- **Visual indicators**: "For Sale" signs show available plots with pricing
+
+### **Building System**:
+- **Building Types**: Wooden fences, sheds, small/large silos
+- **Placement mechanics**: Grid-based snap placement with collision detection
+- **Visual preview**: Ghost buildings show placement validity (green/red)
+- **Cost integration**: Buildings deduct money on placement
+- **Persistence**: All buildings saved and restored with game state
+
+## Livestock System Details
+
+### **Available Animals**:
+
+- **Chickens**: $50 each, $2/day upkeep, produce eggs ($5 each)
+- **Cows**: $1,000 each, $15/day upkeep, produce milk ($25 each)
+- **Pigs**: $300 each, $8/day upkeep, produce meat ($150 each)
+- **Sheep**: $200 each, $5/day upkeep, produce wool ($30 each)
+
+### **Animal Mechanics**:
+- **Age progression**: Animals mature over time (10-30 days)
+- **Health & happiness**: Affected by feeding schedule and care
+- **Production rates**: Mature, healthy animals produce more frequently
+- **Visual feedback**: Animals scale with age, opacity shows health
+- **Economic cycle**: Daily feeding costs vs. product revenue
+
+### **Animal Management**:
+- **Feeding system**: Press F to feed all animals (daily upkeep cost)
+- **Product collection**: Press C to collect and sell animal products
+- **Automatic aging**: Animals age and mature based on game time
+- **Health degradation**: Unfed animals lose health and happiness
+
+## Weather System Integration
+
+### **Crop Growth Effects**:
+- **Rain boost**: Rainy weather accelerates crop growth by 30%
+- **Storm penalty**: Stormy weather slows crop growth by 30%
+- **Cloud benefit**: Cloudy weather provides 10% growth bonus
+- **Yield modifiers**: Weather affects final harvest quantities
+
+### **Visual & Audio Integration**:
+- **Dynamic sounds**: Rain and storm audio change with weather
+- **Real-time effects**: Weather changes impact crops immediately
+- **Console feedback**: Detailed logging shows weather bonuses
+
 ## Roadmap
 
 - [x] ~~Economic system with crop selling and money management~~
@@ -246,8 +328,11 @@ src/
 - [x] ~~Save/load game state~~
 - [x] ~~Audio system and sound effects~~
 - [x] ~~Tool effects on farming efficiency~~
-- [ ] Farm expansion and building system
-- [ ] Livestock management
+- [x] ~~Farm expansion and building system~~
+- [x] ~~Livestock management~~
+- [x] ~~Weather effects on crop yields~~
 - [ ] Multiplayer farming
 - [ ] Advanced farming equipment
-- [ ] Weather effects on crop yields
+- [ ] Seasonal crop varieties
+- [ ] Market trading system
+- [ ] Achievement system

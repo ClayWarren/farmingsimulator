@@ -36,6 +36,20 @@
           <span>Inventory:</span>
           <span id="inventory">Empty</span>
         </div>
+        <div class="flex justify-between my-1 text-sm">
+          <span>Livestock:</span>
+          <span id="livestock">No animals</span>
+        </div>
+      </div>
+
+      <div id="build-mode-status" class="absolute top-5 right-5 min-w-[150px] bg-black/70 border-2 border-slate-700 rounded-lg p-3 pointer-events-auto hidden">
+        <h3 class="text-lg font-bold mb-2">Build Mode</h3>
+        <div id="build-mode-text" class="text-sm">OFF</div>
+      </div>
+
+      <div id="building-selection-panel" class="absolute bottom-5 left-1/2 -translate-x-1/2 bg-black/70 border-2 border-slate-700 rounded-lg p-3 pointer-events-auto hidden">
+        <h3 class="text-lg font-bold mb-2">Select Building</h3>
+        <div id="building-list" class="flex gap-2"></div>
       </div>
 
       <div id="hud-bottom" class="absolute bottom-5 right-5 min-w-[200px] bg-black/70 border-2 border-slate-700 rounded-lg p-3 pointer-events-auto">
@@ -48,11 +62,21 @@
           <div>R - Sell All Crops</div>
           <div>E - Enter Vehicle</div>
           <div>S - Shop</div>
+          <div>B - Build Mode</div>
+          <div>L - Animal Mode</div>
+          <div>F - Feed Animals</div>
+          <div>C - Collect Products</div>
           <div>ESC - Pause Game</div>
         </div>
         <div class="mt-2 text-[11px]">
           <div>Selected: <span id="selected-crop">Wheat</span></div>
         </div>
+      </div>
+
+      <div id="plot-info" class="absolute bottom-5 left-1/2 -translate-x-1/2 bg-black/70 border-2 border-slate-700 rounded-lg p-3 pointer-events-auto hidden">
+        <div id="plot-name" class="text-lg font-bold"></div>
+        <div id="plot-price" class="text-base"></div>
+        <div class="text-xs mt-2">Press 'E' to buy</div>
       </div>
 
       <div id="loading" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-2xl">Loading Farming Simulator...</div>

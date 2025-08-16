@@ -9,6 +9,8 @@ import {
 } from '@babylonjs/core';
 import { TimeSystem, TimeData } from './TimeSystem';
 import { EquipmentSystem } from './EquipmentSystem';
+import { FarmExpansionSystem } from './FarmExpansionSystem';
+import { WeatherSystem } from './WeatherSystem';
 
 export type CropType = 'wheat' | 'corn' | 'potato' | 'carrot';
 
@@ -33,6 +35,8 @@ export class CropSystem {
   private scene: Scene;
   private timeSystem: TimeSystem;
   private equipmentSystem: EquipmentSystem;
+  private farmExpansionSystem: FarmExpansionSystem;
+  private weatherSystem: WeatherSystem;
   private crops: Map<string, CropData> = new Map();
   private cropTemplates: Map<CropType, Mesh> = new Map();
 
@@ -67,10 +71,12 @@ export class CropSystem {
     },
   };
 
-  constructor(scene: Scene, timeSystem: TimeSystem, equipmentSystem: EquipmentSystem) {
+  constructor(scene: Scene, timeSystem: TimeSystem, equipmentSystem: EquipmentSystem, farmExpansionSystem: FarmExpansionSystem, weatherSystem: WeatherSystem) {
     this.scene = scene;
     this.timeSystem = timeSystem;
     this.equipmentSystem = equipmentSystem;
+    this.farmExpansionSystem = farmExpansionSystem;
+    this.weatherSystem = weatherSystem;
   }
 
   initialize(): void {
@@ -105,6 +111,11 @@ export class CropSystem {
   }
 
   plantCrop(cropType: CropType, position: Vector3): boolean {
+    if (!this.farmExpansionSystem.isPositionOnOwnedLand(position)) {
+      console.log("You don't own this land!");
+      return false;
+    }
+
     const key = `${position.x}_${position.z}`;
 
     if (this.crops.has(key)) {
@@ -155,13 +166,19 @@ export class CropSystem {
 
     this.crops.delete(key);
 
-    // Apply equipment effects to yield
+    // Apply equipment and weather effects to yield
     const equipmentEffects = this.equipmentSystem.getEquipmentEffects();
+    const weatherData = this.weatherSystem.getWeatherData();
+    
     const baseAmount = Math.floor(Math.random() * 3) + 2;
-    const modifiedAmount = Math.floor(baseAmount * (equipmentEffects.cropYield || 1.0));
+    const equipmentMultiplier = equipmentEffects.cropYield || 1.0;
+    const weatherMultiplier = this.getWeatherYieldMultiplier(weatherData.type);
+    const totalMultiplier = equipmentMultiplier * weatherMultiplier;
+    
+    const modifiedAmount = Math.floor(baseAmount * totalMultiplier);
     const finalAmount = Math.max(1, modifiedAmount);
     
-    console.log(`Harvested ${crop.type}, got ${finalAmount} units (base: ${baseAmount}, yield bonus: ${((equipmentEffects.cropYield || 1.0) - 1) * 100}%)`);
+    console.log(`Harvested ${crop.type}, got ${finalAmount} units (base: ${baseAmount}, equipment bonus: ${((equipmentMultiplier - 1) * 100).toFixed(0)}%, weather bonus: ${((weatherMultiplier - 1) * 100).toFixed(0)}%)`);
 
     return {
       type: crop.type,
@@ -178,9 +195,14 @@ export class CropSystem {
   private updateCropGrowth(crop: CropData): void {
     const timeData = this.timeSystem.getTimeData();
     const info = this.cropInfo[crop.type];
+    const weatherData = this.weatherSystem.getWeatherData();
 
     const daysSincePlanted = this.calculateDaysSincePlanted(crop, timeData);
-    const growthProgress = daysSincePlanted / info.growthTime;
+    
+    // Apply weather effects to growth rate
+    const weatherMultiplier = this.getWeatherGrowthMultiplier(weatherData.type);
+    const effectiveDays = daysSincePlanted * weatherMultiplier;
+    const growthProgress = effectiveDays / info.growthTime;
 
     let newGrowthStage: number;
     if (growthProgress < 0.25) {
@@ -196,6 +218,36 @@ export class CropSystem {
     if (newGrowthStage !== crop.growthStage) {
       crop.growthStage = newGrowthStage;
       this.updateCropAppearance(crop);
+    }
+  }
+
+  private getWeatherGrowthMultiplier(weatherType: string): number {
+    // Weather effects on crop growth speed
+    switch (weatherType) {
+      case 'Rainy':
+        return 1.3; // 30% faster growth in rain
+      case 'Stormy':
+        return 0.7; // 30% slower growth in storms
+      case 'Cloudy':
+        return 1.1; // 10% faster growth when cloudy
+      case 'Sunny':
+      default:
+        return 1.0; // Normal growth rate
+    }
+  }
+
+  private getWeatherYieldMultiplier(weatherType: string): number {
+    // Weather effects on crop yield when harvesting
+    switch (weatherType) {
+      case 'Rainy':
+        return 1.2; // 20% higher yield if grown during rain
+      case 'Stormy':
+        return 0.8; // 20% lower yield if grown during storms
+      case 'Cloudy':
+        return 1.05; // 5% higher yield when cloudy
+      case 'Sunny':
+      default:
+        return 1.0; // Normal yield
     }
   }
 

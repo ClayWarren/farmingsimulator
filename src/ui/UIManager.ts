@@ -1,30 +1,47 @@
+import { Scene, Ray, Vector3 } from '@babylonjs/core';
 import { TimeSystem } from '../systems/TimeSystem';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { CropSystem, CropType } from '../systems/CropSystem';
 import { EconomySystem } from '../systems/EconomySystem';
 import { EquipmentSystem, Equipment } from '../systems/EquipmentSystem';
+import { FarmExpansionSystem } from '../systems/FarmExpansionSystem';
+import { BuildingSystem } from '../systems/BuildingSystem';
+import { LivestockSystem } from '../systems/LivestockSystem';
 
 export class UIManager {
+  private scene: Scene;
   private timeSystem: TimeSystem;
   private weatherSystem: WeatherSystem;
   private cropSystem: CropSystem;
   private economySystem: EconomySystem;
   private equipmentSystem: EquipmentSystem;
+  private farmExpansionSystem: FarmExpansionSystem;
+  private buildingSystem: BuildingSystem;
+  private livestockSystem: LivestockSystem;
   private isShopOpen: boolean = false;
   private currentShopCategory: number = 0;
+  private onBuildingSelected?: (buildingId: string) => void;
 
   constructor(
+    scene: Scene,
     timeSystem: TimeSystem,
     weatherSystem: WeatherSystem,
     cropSystem: CropSystem,
     economySystem: EconomySystem,
-    equipmentSystem: EquipmentSystem
+    equipmentSystem: EquipmentSystem,
+    farmExpansionSystem: FarmExpansionSystem,
+    buildingSystem: BuildingSystem,
+    livestockSystem: LivestockSystem
   ) {
+    this.scene = scene;
     this.timeSystem = timeSystem;
     this.weatherSystem = weatherSystem;
     this.cropSystem = cropSystem;
     this.economySystem = economySystem;
     this.equipmentSystem = equipmentSystem;
+    this.farmExpansionSystem = farmExpansionSystem;
+    this.buildingSystem = buildingSystem;
+    this.livestockSystem = livestockSystem;
   }
 
   initialize(): void {
@@ -36,6 +53,33 @@ export class UIManager {
 
   update(): void {
     this.updateUI();
+    this.updatePlotInfo();
+  }
+
+  private updatePlotInfo(): void {
+    const plotInfoElement = document.getElementById('plot-info');
+    if (!plotInfoElement) return;
+
+    if (!this.scene.activeCamera) return;
+    
+    const ray = new Ray(this.scene.activeCamera.position, this.scene.activeCamera.getDirection(Vector3.Forward()));
+    const pickInfo = this.scene.pickWithRay(ray, mesh => mesh.name.startsWith('for_sale_sign'));
+
+    if (pickInfo && pickInfo.hit && pickInfo.pickedMesh) {
+      const plotId = pickInfo.pickedMesh.name.replace('for_sale_sign_', '');
+      const plot = this.farmExpansionSystem.getPlot(plotId);
+      if (plot) {
+        const plotNameElement = document.getElementById('plot-name');
+        const plotPriceElement = document.getElementById('plot-price');
+        if (plotNameElement && plotPriceElement) {
+          plotNameElement.textContent = plot.name;
+          plotPriceElement.textContent = `${plot.price.toLocaleString()}`;
+          plotInfoElement.classList.remove('hidden');
+        }
+      }
+    } else {
+      plotInfoElement.classList.add('hidden');
+    }
   }
 
   private updateUI(): void {
@@ -44,6 +88,44 @@ export class UIManager {
     this.updateMoneyDisplay();
     this.updateCropDisplay();
     this.updateInventoryDisplay();
+    this.updateLivestockDisplay();
+  }
+
+  setBuildModeStatus(isBuildMode: boolean): void {
+    const buildModeStatusElement = document.getElementById('build-mode-status');
+    const buildModeTextElement = document.getElementById('build-mode-text');
+    const buildingSelectionPanel = document.getElementById('building-selection-panel');
+
+    if (buildModeStatusElement && buildModeTextElement) {
+      buildModeStatusElement.classList.toggle('hidden', !isBuildMode);
+      buildModeTextElement.textContent = isBuildMode ? 'ON' : 'OFF';
+    }
+
+    if (buildingSelectionPanel) {
+      buildingSelectionPanel.classList.toggle('hidden', !isBuildMode);
+      if (isBuildMode) {
+        this.populateBuildingList();
+      }
+    }
+  }
+
+  private populateBuildingList(): void {
+    const buildingListElement = document.getElementById('building-list');
+    if (!buildingListElement) return;
+
+    buildingListElement.innerHTML = ''; // Clear existing list
+
+    this.buildingSystem.getBuildingCatalog().forEach(building => {
+      const button = document.createElement('button');
+      button.className = 'bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded text-sm';
+      button.textContent = `${building.name} (${building.price})`;
+      button.addEventListener('click', () => {
+        if (this.onBuildingSelected) {
+          this.onBuildingSelected(building.id);
+        }
+      });
+      buildingListElement.appendChild(button);
+    });
   }
 
   private updateTimeDisplay(): void {
@@ -94,6 +176,23 @@ export class UIManager {
       const canAfford = this.economySystem.canAffordSeeds(cropType as CropType);
       const affordText = canAfford ? '' : ' (💰)';
       selectedCropElement.textContent = `${cropInfo.name} ($${seedPrice})${affordText}`;
+    }
+  }
+
+  private updateLivestockDisplay(): void {
+    const livestockElement = document.getElementById('livestock');
+    if (livestockElement) {
+      const animalCount = this.livestockSystem.getAnimalCount();
+      const animalsByType = this.livestockSystem.getAnimalsByType();
+      
+      if (animalCount > 0) {
+        const typesList = Object.entries(animalsByType)
+          .map(([type, count]) => `${count} ${type}${count > 1 ? 's' : ''}`)
+          .join(', ');
+        livestockElement.textContent = `${animalCount} animals: ${typesList}`;
+      } else {
+        livestockElement.textContent = 'No animals';
+      }
     }
   }
 
@@ -335,5 +434,9 @@ export class UIManager {
     } else {
       this.showSaveMessage('Purchase Failed!');
     }
+  }
+
+  public setOnBuildingSelectedCallback(callback: (buildingId: string) => void): void {
+    this.onBuildingSelected = callback;
   }
 }

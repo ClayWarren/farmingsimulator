@@ -17,6 +17,9 @@ import { CropSystem } from '../systems/CropSystem';
 import { EconomySystem } from '../systems/EconomySystem';
 import { VehicleSystem } from '../systems/VehicleSystem';
 import { EquipmentSystem } from '../systems/EquipmentSystem';
+import { FarmExpansionSystem } from '../systems/FarmExpansionSystem';
+import { BuildingSystem } from '../systems/BuildingSystem';
+import { LivestockSystem } from '../systems/LivestockSystem';
 import { UIManager } from '../ui/UIManager';
 
 export class Game {
@@ -31,6 +34,9 @@ export class Game {
   private economySystem!: EconomySystem;
   private vehicleSystem!: VehicleSystem;
   private equipmentSystem!: EquipmentSystem;
+  private farmExpansionSystem!: FarmExpansionSystem;
+  private buildingSystem!: BuildingSystem;
+  private livestockSystem!: LivestockSystem;
   private uiManager!: UIManager;
   private audioManager!: AudioManager;
   private isPaused: boolean = false;
@@ -100,13 +106,17 @@ export class Game {
   }
 
   private async initializeSystems(): Promise<void> {
-    this.sceneManager = new SceneManager(this.scene);
+    this.farmExpansionSystem = new FarmExpansionSystem();
+    this.buildingSystem = new BuildingSystem();
+    this.livestockSystem = new LivestockSystem(this.scene, this.timeSystem, this.economySystem, this.farmExpansionSystem);
+    this.sceneManager = new SceneManager(this.scene, this.farmExpansionSystem, this.buildingSystem);
     this.timeSystem = new TimeSystem();
     this.weatherSystem = new WeatherSystem(this.scene);
     this.economySystem = new EconomySystem();
+    this.economySystem.setBuildingSystem(this.buildingSystem);
     this.vehicleSystem = new VehicleSystem(this.scene);
     this.equipmentSystem = new EquipmentSystem();
-    this.cropSystem = new CropSystem(this.scene, this.timeSystem);
+    this.cropSystem = new CropSystem(this.scene, this.timeSystem, this.equipmentSystem, this.farmExpansionSystem, this.weatherSystem);
     this.audioManager = new AudioManager();
     this.inputManager = new InputManager(
       this.scene,
@@ -114,15 +124,22 @@ export class Game {
       this.cropSystem,
       this.economySystem,
       this.vehicleSystem,
-      this.equipmentSystem, // Pass the equipment system
+      this.equipmentSystem,
+      this.farmExpansionSystem,
+      this.buildingSystem,
+      this.livestockSystem,
       this.audioManager
     );
     this.uiManager = new UIManager(
+      this.scene,
       this.timeSystem,
       this.weatherSystem,
       this.cropSystem,
       this.economySystem,
-      this.equipmentSystem
+      this.equipmentSystem,
+      this.farmExpansionSystem,
+      this.buildingSystem,
+      this.livestockSystem
     );
 
     this.sceneManager.initialize();
@@ -133,6 +150,9 @@ export class Game {
     this.economySystem.initialize();
     this.vehicleSystem.initialize();
     this.equipmentSystem.initialize();
+    this.farmExpansionSystem.initialize();
+    this.buildingSystem.initialize();
+    this.livestockSystem.initialize();
     this.cropSystem.initialize();
     this.uiManager.initialize();
 
@@ -149,6 +169,18 @@ export class Game {
 
     this.inputManager.setShopCallback(() => {
       this.uiManager.toggleShop();
+    });
+
+    this.inputManager.setToggleBuildModeCallback(isBuildMode => {
+      this.uiManager.setBuildModeStatus(isBuildMode);
+    });
+
+    this.inputManager.setBuildingPlacedCallback(() => {
+      this.sceneManager.refreshPlacedBuildings();
+    });
+
+    this.uiManager.setOnBuildingSelectedCallback(buildingId => {
+      this.inputManager.setSelectedBuilding(buildingId);
     });
   }
 
@@ -226,6 +258,7 @@ export class Game {
     this.weatherSystem.update(deltaTime);
     this.economySystem.update(deltaTime);
     this.vehicleSystem.update(deltaTime);
+    this.livestockSystem.update();
     this.cropSystem.update();
     this.inputManager.update(deltaTime);
     this.uiManager.update();
@@ -254,6 +287,10 @@ export class Game {
     this.weatherSystem.initialize();
     this.economySystem.initialize();
     this.vehicleSystem.initialize();
+    this.equipmentSystem.initialize();
+    this.farmExpansionSystem.initialize();
+    this.buildingSystem.initialize();
+    this.livestockSystem.initialize();
     this.cropSystem.initialize();
     this.isPaused = false;
     this.uiManager.setPauseState(false);
@@ -276,6 +313,10 @@ export class Game {
         cropsData: this.cropSystem.getSaveData(),
         weatherData: this.weatherSystem.getSaveData(),
         vehicleData: this.vehicleSystem.getSaveData(),
+        equipmentData: this.equipmentSystem.getSaveData(),
+        farmExpansionData: this.farmExpansionSystem.getSaveData(),
+        buildingData: this.buildingSystem.getSaveData(),
+        livestockData: this.livestockSystem.getSaveData(),
         playerPosition: SaveManager.vector3ToObject(camera.position),
         playerRotation: SaveManager.vector3ToObject(camera.rotation),
       };
@@ -311,6 +352,10 @@ export class Game {
       this.cropSystem.loadSaveData(saveData.cropsData);
       this.weatherSystem.loadSaveData(saveData.weatherData);
       this.vehicleSystem.loadSaveData(saveData.vehicleData);
+      this.equipmentSystem.loadSaveData(saveData.equipmentData);
+      this.farmExpansionSystem.loadSaveData(saveData.farmExpansionData);
+      this.buildingSystem.loadSaveData(saveData.buildingData);
+      this.livestockSystem.loadSaveData(saveData.livestockData);
 
       // Restore player position and rotation
       const camera = this.scene.activeCamera as FreeCamera;

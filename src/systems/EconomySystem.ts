@@ -1,5 +1,6 @@
 import { CropType } from './CropSystem';
 import { EquipmentSystem } from './EquipmentSystem';
+import { BuildingSystem } from './BuildingSystem';
 
 export interface InventoryItem {
   type: CropType;
@@ -28,6 +29,7 @@ export class EconomySystem {
   private lastPriceUpdate: number = 0;
   private priceUpdateInterval: number = 300;
   private equipmentSystem?: EquipmentSystem;
+  private buildingSystem?: BuildingSystem;
 
   constructor() {
     this.initializeInventory();
@@ -40,6 +42,10 @@ export class EconomySystem {
 
   setEquipmentSystem(equipmentSystem: EquipmentSystem): void {
     this.equipmentSystem = equipmentSystem;
+  }
+
+  setBuildingSystem(buildingSystem: BuildingSystem): void {
+    this.buildingSystem = buildingSystem;
   }
 
   private initializeInventory(): void {
@@ -201,11 +207,18 @@ export class EconomySystem {
 
   getStorageCapacity(): number {
     const baseCapacity = 500;
-    if (!this.equipmentSystem) {
-      return baseCapacity;
+    let equipmentCapacity = 0;
+    if (this.equipmentSystem) {
+      const equipmentEffects = this.equipmentSystem.getEquipmentEffects();
+      equipmentCapacity = equipmentEffects.storageCapacity || 0;
     }
-    const equipmentEffects = this.equipmentSystem.getEquipmentEffects();
-    return baseCapacity + (equipmentEffects.storageCapacity || 0);
+
+    let buildingCapacity = 0;
+    if (this.buildingSystem) {
+      buildingCapacity = this.buildingSystem.getTotalStorageCapacity();
+    }
+
+    return baseCapacity + equipmentCapacity + buildingCapacity;
   }
 
   getStorageInfo(): { used: number; capacity: number; percentage: number } {

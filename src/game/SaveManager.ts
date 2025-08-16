@@ -2,6 +2,7 @@ import { Vector3 } from '@babylonjs/core';
 import { TimeData } from '../systems/TimeSystem';
 import { CropType } from '../systems/CropSystem';
 import { WeatherType } from '../systems/WeatherSystem';
+import { AnimalType } from '../systems/LivestockSystem';
 
 export interface SavedCropData {
   type: CropType;
@@ -52,6 +53,18 @@ export interface SavedVehicleData {
   }>;
 }
 
+export interface SavedLivestockData {
+  animals: Array<{
+    id: string;
+    type: AnimalType;
+    position: { x: number; y: number; z: number };
+    age: number;
+    happiness: number;
+    health: number;
+    lastFed: number;
+  }>;
+}
+
 export interface GameSaveData {
   version: string;
   timestamp: number;
@@ -62,6 +75,10 @@ export interface GameSaveData {
   vehicleData: SavedVehicleData;
   playerPosition: { x: number; y: number; z: number };
   playerRotation: { x: number; y: number; z: number };
+  equipmentData: { ownedEquipment: string[] };
+  farmExpansionData: { ownedPlots: string[] };
+  buildingData: { placedBuildings: Array<{ id: string; position: { x: number; y: number; z: number }; rotation: { x: number; y: number; z: number }; dimensions: { x: number; y: number; z: number }; }>; };
+  livestockData: SavedLivestockData;
 }
 
 export class SaveManager {
