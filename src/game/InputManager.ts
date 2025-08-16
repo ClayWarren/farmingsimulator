@@ -2,6 +2,7 @@ import { Scene, FreeCamera, Vector3, Ray } from '@babylonjs/core';
 import { CropSystem, CropType } from '../systems/CropSystem';
 import { EconomySystem } from '../systems/EconomySystem';
 import { VehicleSystem } from '../systems/VehicleSystem';
+import { AudioManager } from '../audio/AudioManager';
 
 export class InputManager {
   private scene: Scene;
@@ -10,6 +11,7 @@ export class InputManager {
   private cropSystem: CropSystem;
   private economySystem: EconomySystem;
   private vehicleSystem: VehicleSystem;
+  private audioManager: AudioManager;
   private keys: { [key: string]: boolean } = {};
   private moveSpeed = 20;
   private isPointerLocked = false;
@@ -22,13 +24,15 @@ export class InputManager {
     canvas: HTMLCanvasElement,
     cropSystem: CropSystem,
     economySystem: EconomySystem,
-    vehicleSystem: VehicleSystem
+    vehicleSystem: VehicleSystem,
+    audioManager: AudioManager
   ) {
     this.scene = scene;
     this.canvas = canvas;
     this.cropSystem = cropSystem;
     this.economySystem = economySystem;
     this.vehicleSystem = vehicleSystem;
+    this.audioManager = audioManager;
     this.camera = scene.activeCamera as FreeCamera;
   }
 
@@ -140,6 +144,7 @@ export class InputManager {
     if (existingCrop) {
       const result = this.cropSystem.harvestCrop(gridPosition);
       if (result) {
+        this.audioManager.playSound('interaction_harvest');
         this.economySystem.addToInventory(result.type, result.amount);
         console.log(
           `Harvested ${result.amount} ${result.type}(s) and added to inventory`
@@ -155,6 +160,7 @@ export class InputManager {
             gridPosition
           );
           if (success) {
+            this.audioManager.playSound('interaction_plant');
             console.log(
               `Bought seeds and planted ${this.currentCropType} at (${gridX}, ${gridZ})`
             );
@@ -183,6 +189,7 @@ export class InputManager {
 
   private handleVehicleInteraction(): void {
     if (this.vehicleSystem.isInVehicle()) {
+      this.audioManager.playSound('vehicle_stop');
       this.vehicleSystem.exitVehicle();
       this.camera = this.scene.activeCamera as FreeCamera;
     } else {
@@ -190,6 +197,7 @@ export class InputManager {
         this.camera.position
       );
       if (nearestVehicle) {
+        this.audioManager.playSound('vehicle_start');
         this.vehicleSystem.enterVehicle(nearestVehicle.id);
       } else {
         console.log('No vehicle nearby');
@@ -247,6 +255,7 @@ export class InputManager {
 
   private selectCrop(cropType: CropType): void {
     this.currentCropType = cropType;
+    this.audioManager.playSound('interaction_click');
     console.log(`Selected crop: ${cropType}`);
     if (this.onCropSelectionChange) {
       this.onCropSelectionChange(cropType);
@@ -275,6 +284,7 @@ export class InputManager {
     });
 
     if (totalSold > 0) {
+      this.audioManager.playSound('economy_sell');
       console.log(`Sold all crops: ${totalSold} items for $${totalRevenue}`);
     } else {
       console.log('No crops to sell');

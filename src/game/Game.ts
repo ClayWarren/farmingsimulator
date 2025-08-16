@@ -10,6 +10,7 @@ import {
 import { SceneManager } from './SceneManager';
 import { InputManager } from './InputManager';
 import { SaveManager, GameSaveData } from './SaveManager';
+import { AudioManager } from '../audio/AudioManager';
 import { TimeSystem } from '../systems/TimeSystem';
 import { WeatherSystem } from '../systems/WeatherSystem';
 import { CropSystem } from '../systems/CropSystem';
@@ -29,7 +30,9 @@ export class Game {
   private economySystem!: EconomySystem;
   private vehicleSystem!: VehicleSystem;
   private uiManager!: UIManager;
+  private audioManager!: AudioManager;
   private isPaused: boolean = false;
+  private lastWeatherType: string = '';
 
   constructor() {
     this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
@@ -41,7 +44,7 @@ export class Game {
   async initialize(): Promise<void> {
     await this.createEngine();
     this.createScene();
-    this.initializeSystems();
+    await this.initializeSystems();
     this.setupEventListeners();
   }
 
@@ -94,19 +97,21 @@ export class Game {
     light.specular = Color3.FromHexString('#FFE4B5');
   }
 
-  private initializeSystems(): void {
+  private async initializeSystems(): Promise<void> {
     this.sceneManager = new SceneManager(this.scene);
     this.timeSystem = new TimeSystem();
     this.weatherSystem = new WeatherSystem(this.scene);
     this.economySystem = new EconomySystem();
     this.vehicleSystem = new VehicleSystem(this.scene);
     this.cropSystem = new CropSystem(this.scene, this.timeSystem);
+    this.audioManager = new AudioManager();
     this.inputManager = new InputManager(
       this.scene,
       this.canvas,
       this.cropSystem,
       this.economySystem,
-      this.vehicleSystem
+      this.vehicleSystem,
+      this.audioManager
     );
     this.uiManager = new UIManager(
       this.timeSystem,
@@ -116,6 +121,7 @@ export class Game {
     );
 
     this.sceneManager.initialize();
+    await this.audioManager.initialize();
     this.inputManager.initialize();
     this.timeSystem.initialize();
     this.weatherSystem.initialize();
@@ -123,6 +129,9 @@ export class Game {
     this.vehicleSystem.initialize();
     this.cropSystem.initialize();
     this.uiManager.initialize();
+
+    // Start ambient sounds
+    this.startAmbientSounds();
 
     this.inputManager.setCropSelectionCallback(cropType => {
       this.uiManager.updateSelectedCrop(cropType);
@@ -133,10 +142,63 @@ export class Game {
     });
   }
 
+  private startAmbientSounds(): void {
+    // Start wind ambient loop
+    this.audioManager.startAmbientLoop('ambient_wind', 'wind_loop');
+
+    // Schedule random bird sounds
+    this.scheduleBirdSounds();
+
+    // Update ambient sounds based on weather
+    this.updateWeatherSounds();
+  }
+
+  private scheduleBirdSounds(): void {
+    const playBird = () => {
+      if (!this.isPaused && this.timeSystem.isDaytime()) {
+        this.audioManager.playSound('ambient_birds');
+      }
+
+      // Schedule next bird sound (5-15 seconds)
+      const nextBirdDelay = 5000 + Math.random() * 10000;
+      setTimeout(playBird, nextBirdDelay);
+    };
+
+    // Start first bird sound after 2-8 seconds
+    const initialDelay = 2000 + Math.random() * 6000;
+    setTimeout(playBird, initialDelay);
+  }
+
+  private updateWeatherSounds(): void {
+    const weatherData = this.weatherSystem.getWeatherData();
+
+    // Stop all weather loops first
+    this.audioManager.stopAmbientLoop('rain_loop');
+    this.audioManager.stopAmbientLoop('storm_loop');
+
+    switch (weatherData.type) {
+      case 'Rainy':
+        this.audioManager.startAmbientLoop('weather_rain', 'rain_loop');
+        break;
+      case 'Stormy':
+        this.audioManager.startAmbientLoop('weather_storm', 'storm_loop');
+        break;
+    }
+  }
+
   private setupEventListeners(): void {
     window.addEventListener('resize', () => {
       this.engine.resize();
     });
+
+    // Resume audio context on first user interaction
+    const resumeAudio = () => {
+      this.audioManager.resume();
+      document.removeEventListener('click', resumeAudio);
+      document.removeEventListener('keydown', resumeAudio);
+    };
+    document.addEventListener('click', resumeAudio);
+    document.addEventListener('keydown', resumeAudio);
 
     this.scene.onBeforeRenderObservable.add(() => {
       this.update();
@@ -157,6 +219,13 @@ export class Game {
     this.cropSystem.update();
     this.inputManager.update(deltaTime);
     this.uiManager.update();
+
+    // Update weather sounds when weather changes
+    const currentWeather = this.weatherSystem.getWeatherData().type;
+    if (currentWeather !== this.lastWeatherType) {
+      this.updateWeatherSounds();
+      this.lastWeatherType = currentWeather;
+    }
   }
 
   togglePause(): void {
@@ -261,6 +330,10 @@ export class Game {
       this.uiManager.showSaveMessage('Save Deleted!');
     }
     return success;
+  }
+
+  getAudioManager(): AudioManager {
+    return this.audioManager;
   }
 
   start(): void {

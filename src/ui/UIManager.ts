@@ -120,6 +120,7 @@ export class UIManager {
 
     if (resumeButton) {
       resumeButton.addEventListener('click', () => {
+        (window as any).game?.getAudioManager()?.playSound('interaction_click');
         this.setPauseState(false);
         (window as any).game?.togglePause();
       });
@@ -127,12 +128,14 @@ export class UIManager {
 
     if (saveButton) {
       saveButton.addEventListener('click', () => {
+        (window as any).game?.getAudioManager()?.playSound('interaction_click');
         (window as any).game?.saveGame();
       });
     }
 
     if (loadButton) {
       loadButton.addEventListener('click', () => {
+        (window as any).game?.getAudioManager()?.playSound('interaction_click');
         const success = (window as any).game?.loadGame();
         if (success) {
           this.setPauseState(false);
@@ -143,6 +146,7 @@ export class UIManager {
 
     if (restartButton) {
       restartButton.addEventListener('click', () => {
+        (window as any).game?.getAudioManager()?.playSound('interaction_click');
         this.setPauseState(false);
         (window as any).game?.restartGame();
       });
