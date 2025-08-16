@@ -92,6 +92,8 @@ export class UIManager {
   }
 
   setBuildModeStatus(isBuildMode: boolean): void {
+    console.log('Setting build mode status:', isBuildMode);
+    
     const buildModeStatusElement = document.getElementById('build-mode-status');
     const buildModeTextElement = document.getElementById('build-mode-text');
     const buildingSelectionPanel = document.getElementById('building-selection-panel');
@@ -99,33 +101,50 @@ export class UIManager {
     if (buildModeStatusElement && buildModeTextElement) {
       buildModeStatusElement.classList.toggle('hidden', !isBuildMode);
       buildModeTextElement.textContent = isBuildMode ? 'ON' : 'OFF';
+      console.log('Build mode status element updated');
+    } else {
+      console.log('Build mode status elements not found!');
     }
 
     if (buildingSelectionPanel) {
       buildingSelectionPanel.classList.toggle('hidden', !isBuildMode);
+      console.log('Building selection panel visibility:', isBuildMode ? 'shown' : 'hidden');
       if (isBuildMode) {
         this.populateBuildingList();
       }
+    } else {
+      console.log('Building selection panel not found!');
     }
   }
 
   private populateBuildingList(): void {
     const buildingListElement = document.getElementById('building-list');
-    if (!buildingListElement) return;
+    if (!buildingListElement) {
+      console.log('Building list element not found!');
+      return;
+    }
 
     buildingListElement.innerHTML = ''; // Clear existing list
 
-    this.buildingSystem.getBuildingCatalog().forEach(building => {
+    const buildings = this.buildingSystem.getBuildingCatalog();
+    console.log('Populating building list with', buildings.length, 'buildings');
+
+    buildings.forEach(building => {
       const button = document.createElement('button');
-      button.className = 'bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded text-sm';
-      button.textContent = `${building.name} (${building.price})`;
+      button.className = 'bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded text-sm pointer-events-auto';
+      button.textContent = `${building.name} ($${building.price})`;
       button.addEventListener('click', () => {
+        console.log('Building button clicked:', building.id);
         if (this.onBuildingSelected) {
           this.onBuildingSelected(building.id);
+        } else {
+          console.log('No onBuildingSelected callback set!');
         }
       });
       buildingListElement.appendChild(button);
     });
+    
+    console.log('Building list populated with', buildingListElement.children.length, 'buttons');
   }
 
   private updateTimeDisplay(): void {

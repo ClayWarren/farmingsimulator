@@ -33,6 +33,7 @@ export class VehicleSystem {
 
   initialize(): void {
     this.createTractor();
+    this.createCombineHarvester();
     console.log('Vehicle system initialized with', this.vehicles.size, 'vehicles');
     this.vehicles.forEach((vehicle, id) => {
       console.log('Vehicle created:', id, 'at position', vehicle.position);
@@ -55,6 +56,24 @@ export class VehicleSystem {
 
     tractorMesh.position = tractor.position.clone();
     this.vehicles.set(tractor.id, tractor);
+  }
+
+  private createCombineHarvester(): void {
+    const combineHarvesterMesh = this.createCombineHarvesterMesh();
+
+    const combineHarvester: Vehicle = {
+      id: 'combine_harvester_1',
+      name: 'Combine Harvester',
+      mesh: combineHarvesterMesh,
+      position: new Vector3(25, 0, 15), // Position it near the tractor
+      rotation: Vector3.Zero(),
+      speed: 0,
+      maxSpeed: 15, // Slower than tractor but more powerful
+      isOccupied: false,
+    };
+
+    combineHarvesterMesh.position = combineHarvester.position.clone();
+    this.vehicles.set(combineHarvester.id, combineHarvester);
   }
 
   private createTractorMesh(): Mesh {
@@ -141,6 +160,98 @@ export class VehicleSystem {
     return tractor;
   }
 
+  private createCombineHarvesterMesh(): Mesh {
+    // Main body - larger and longer than tractor
+    const body = MeshBuilder.CreateBox(
+      'combine_harvester_body',
+      {
+        width: 4,
+        height: 3,
+        depth: 8,
+      },
+      this.scene
+    );
+
+    const bodyMaterial = new StandardMaterial('combineBodyMaterial', this.scene);
+    bodyMaterial.diffuseColor = Color3.FromHexString('#8B0000'); // Dark red
+    bodyMaterial.specularColor = Color3.FromHexString('#660000');
+    body.material = bodyMaterial;
+    body.position.y = 1.5;
+
+    // Cab - elevated cab at the back
+    const cab = MeshBuilder.CreateBox(
+      'combine_cab',
+      {
+        width: 3,
+        height: 2.5,
+        depth: 3,
+      },
+      this.scene
+    );
+
+    const cabMaterial = new StandardMaterial('combineCabMaterial', this.scene);
+    cabMaterial.diffuseColor = Color3.FromHexString('#654321'); // Brown
+    cab.material = cabMaterial;
+    cab.position = new Vector3(0, 3.75, -2);
+    cab.parent = body;
+
+    // Header/cutting platform at front
+    const header = MeshBuilder.CreateBox(
+      'combine_header',
+      {
+        width: 5,
+        height: 0.8,
+        depth: 2,
+      },
+      this.scene
+    );
+
+    const headerMaterial = new StandardMaterial('combineHeaderMaterial', this.scene);
+    headerMaterial.diffuseColor = Color3.FromHexString('#FFD700'); // Gold/yellow
+    header.material = headerMaterial;
+    header.position = new Vector3(0, 0.4, 4);
+    header.parent = body;
+
+    // Grain tank (elevated cylinder)
+    const grainTank = MeshBuilder.CreateCylinder(
+      'combine_grain_tank',
+      {
+        height: 2,
+        diameter: 2.5,
+      },
+      this.scene
+    );
+
+    const tankMaterial = new StandardMaterial('combineTankMaterial', this.scene);
+    tankMaterial.diffuseColor = Color3.FromHexString('#C0C0C0'); // Silver
+    grainTank.material = tankMaterial;
+    grainTank.position = new Vector3(0, 3, 1);
+    grainTank.parent = body;
+
+    // Large wheels - bigger than tractor
+    const wheelMaterial = new StandardMaterial('combineWheelMaterial', this.scene);
+    wheelMaterial.diffuseColor = Color3.FromHexString('#2F2F2F');
+
+    const frontWheel1 = MeshBuilder.CreateCylinder('combine_frontWheel1', { height: 0.8, diameter: 2.5 }, this.scene);
+    const frontWheel2 = MeshBuilder.CreateCylinder('combine_frontWheel2', { height: 0.8, diameter: 2.5 }, this.scene);
+    const backWheel1 = MeshBuilder.CreateCylinder('combine_backWheel1', { height: 0.8, diameter: 2.5 }, this.scene);
+    const backWheel2 = MeshBuilder.CreateCylinder('combine_backWheel2', { height: 0.8, diameter: 2.5 }, this.scene);
+
+    [frontWheel1, frontWheel2, backWheel1, backWheel2].forEach(wheel => {
+      wheel.material = wheelMaterial;
+      wheel.parent = body;
+      wheel.rotation.z = Math.PI / 2;
+    });
+
+    // Position wheels
+    frontWheel1.position = new Vector3(-2.25, -1, 2);
+    frontWheel2.position = new Vector3(2.25, -1, 2);
+    backWheel1.position = new Vector3(-2.25, -1, -2);
+    backWheel2.position = new Vector3(2.25, -1, -2);
+
+    return body;
+  }
+
   enterVehicle(vehicleId: string): boolean {
     const vehicle = this.vehicles.get(vehicleId);
     if (!vehicle || vehicle.isOccupied) {
@@ -158,13 +269,14 @@ export class VehicleSystem {
     
     // Configure vehicle camera for mouse look
     this.vehicleCamera.setTarget(vehicle.mesh.position);
-    this.vehicleCamera.attachControls(this.scene.getEngine().getRenderingCanvas());
     
     // Set up proper mouse sensitivity for vehicle camera
-    this.vehicleCamera.angularSensibilityX = 2000;
-    this.vehicleCamera.angularSensibilityY = 2000;
+    this.vehicleCamera.angularSensibility = 2000;
     
     this.scene.activeCamera = this.vehicleCamera;
+    
+    // Attach controls to canvas using the correct method
+    this.vehicleCamera.attachControl(this.scene.getEngine().getRenderingCanvas(), true);
 
     console.log(`Entered ${vehicle.name}`);
     return true;
@@ -180,14 +292,14 @@ export class VehicleSystem {
 
     // Detach controls from vehicle camera before switching
     if (this.vehicleCamera) {
-      this.vehicleCamera.detachControls();
+      this.vehicleCamera.detachControl();
       this.vehicleCamera.dispose();
       this.vehicleCamera = null;
     }
 
     // Switch back to player camera and reattach controls
     this.scene.activeCamera = this.playerCamera;
-    this.playerCamera.attachControls(this.scene.getEngine().getRenderingCanvas());
+    this.playerCamera.attachControl(this.scene.getEngine().getRenderingCanvas(), true);
 
     const exitPosition = this.currentVehicle.mesh.position.add(
       new Vector3(5, 2, 0)

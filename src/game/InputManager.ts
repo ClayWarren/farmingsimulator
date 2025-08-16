@@ -6,6 +6,7 @@ import { EquipmentSystem } from '../systems/EquipmentSystem';
 import { FarmExpansionSystem } from '../systems/FarmExpansionSystem';
 import { BuildingSystem } from '../systems/BuildingSystem';
 import { LivestockSystem, AnimalType } from '../systems/LivestockSystem';
+import { FieldStateSystem } from '../systems/FieldStateSystem';
 import { AudioManager } from '../audio/AudioManager';
 
 export class InputManager {
@@ -19,6 +20,7 @@ export class InputManager {
   private farmExpansionSystem: FarmExpansionSystem;
   private buildingSystem: BuildingSystem;
   private livestockSystem: LivestockSystem;
+  private fieldStateSystem: FieldStateSystem;
   private audioManager: AudioManager;
   private keys: { [key: string]: boolean } = {};
   private moveSpeed = 20;
@@ -46,6 +48,7 @@ export class InputManager {
     farmExpansionSystem: FarmExpansionSystem,
     buildingSystem: BuildingSystem,
     livestockSystem: LivestockSystem,
+    fieldStateSystem: FieldStateSystem,
     audioManager: AudioManager
   ) {
     this.scene = scene;
@@ -57,6 +60,7 @@ export class InputManager {
     this.farmExpansionSystem = farmExpansionSystem;
     this.buildingSystem = buildingSystem;
     this.livestockSystem = livestockSystem;
+    this.fieldStateSystem = fieldStateSystem;
     this.audioManager = audioManager;
     this.camera = scene.activeCamera as FreeCamera;
   }
@@ -289,6 +293,8 @@ export class InputManager {
         if (!storageSuccess) {
           console.log('Storage is full! Consider buying more storage equipment.');
         }
+        // Update field state to harvested
+        this.fieldStateSystem.updateFieldState(gridPosition, 'harvested');
         console.log(
           `Harvested ${result.amount} ${result.type}(s) with ${((harvestSpeedMultiplier - 1) * 100).toFixed(0)}% speed bonus`
         );
@@ -305,6 +311,8 @@ export class InputManager {
           );
           if (success) {
             this.audioManager.playSound('interaction_plant');
+            // Create field state when planting
+            this.fieldStateSystem.updateFieldState(gridPosition, 'planted', this.currentCropType);
             console.log(
               `Planted ${this.currentCropType} with ${((speedMultiplier - 1) * 100).toFixed(0)}% speed bonus at (${gridX}, ${gridZ})`
             );
@@ -354,13 +362,145 @@ export class InputManager {
     const building = this.buildingSystem.getBuilding(this.currentBuildingId);
     if (!building) return;
 
-    // For now, create a simple box as a placeholder for the building model
-    this.ghostMesh = MeshBuilder.CreateBox('ghostBuilding', { size: 2 }, this.scene);
-    const ghostMaterial = new StandardMaterial('ghostMaterial', this.scene);
-    ghostMaterial.alpha = 0.5;
-    ghostMaterial.diffuseColor = Color3.Green(); // Default to green
-    this.ghostMesh.material = ghostMaterial;
+    // Create a proper building preview mesh based on building type
+    this.ghostMesh = this.createBuildingPreview(building);
+    
+    // Make it semi-transparent and green to indicate it's a preview
+    if (this.ghostMesh.material instanceof StandardMaterial) {
+      this.ghostMesh.material.alpha = 0.6;
+      this.ghostMesh.material.emissiveColor = Color3.Green().scale(0.3);
+    }
+    
     this.ghostMesh.isPickable = false; // Ghost mesh should not be pickable
+  }
+
+  private createBuildingPreview(building: any): Mesh {
+    let previewMesh: Mesh;
+
+    switch (building.id) {
+      case 'wooden_fence':
+        previewMesh = this.createFencePreview();
+        break;
+      case 'small_shed':
+        previewMesh = this.createShedPreview();
+        break;
+      case 'small_silo':
+        previewMesh = this.createSmallSiloPreview();
+        break;
+      case 'large_silo':
+        previewMesh = this.createLargeSiloPreview();
+        break;
+      default:
+        previewMesh = this.createDefaultBuildingPreview(building);
+    }
+
+    return previewMesh;
+  }
+
+  private createFencePreview(): Mesh {
+    // Create fence post
+    const post = MeshBuilder.CreateBox('preview_post', { width: 0.2, height: 2, depth: 0.2 }, this.scene);
+    
+    // Create fence panels
+    const panel1 = MeshBuilder.CreateBox('preview_panel1', { width: 1.8, height: 0.15, depth: 0.05 }, this.scene);
+    panel1.position.y = 0.6;
+    
+    const panel2 = MeshBuilder.CreateBox('preview_panel2', { width: 1.8, height: 0.15, depth: 0.05 }, this.scene);
+    panel2.position.y = 1.2;
+
+    // Merge into single mesh
+    const fence = Mesh.MergeMeshes([post, panel1, panel2], true, true);
+    
+    if (fence) {
+      const material = new StandardMaterial('fence_preview_material', this.scene);
+      material.diffuseColor = Color3.FromHexString('#8B4513');
+      fence.material = material;
+    }
+
+    return fence!;
+  }
+
+  private createShedPreview(): Mesh {
+    // Create walls
+    const walls = MeshBuilder.CreateBox('preview_walls', { width: 5, height: 3, depth: 5 }, this.scene);
+    
+    // Create roof
+    const roof = MeshBuilder.CreateBox('preview_roof', { width: 5.5, height: 0.3, depth: 5.5 }, this.scene);
+    roof.position.y = 1.8;
+    
+    // Create door frame
+    const doorFrame = MeshBuilder.CreateBox('preview_door', { width: 1.2, height: 2.2, depth: 0.1 }, this.scene);
+    doorFrame.position.y = -0.4;
+    doorFrame.position.z = 2.5;
+
+    // Merge into single mesh
+    const shed = Mesh.MergeMeshes([walls, roof, doorFrame], true, true);
+    
+    if (shed) {
+      const material = new StandardMaterial('shed_preview_material', this.scene);
+      material.diffuseColor = Color3.FromHexString('#654321');
+      shed.material = material;
+      shed.position.y = 1.5;
+    }
+
+    return shed!;
+  }
+
+  private createSmallSiloPreview(): Mesh {
+    // Create main cylinder
+    const body = MeshBuilder.CreateCylinder('preview_silo_body', { height: 8, diameter: 4 }, this.scene);
+    
+    // Create conical top
+    const top = MeshBuilder.CreateCylinder('preview_silo_top', { height: 2, diameterTop: 0.5, diameterBottom: 4 }, this.scene);
+    top.position.y = 5;
+
+    // Merge into single mesh
+    const silo = Mesh.MergeMeshes([body, top], true, true);
+    
+    if (silo) {
+      const material = new StandardMaterial('silo_preview_material', this.scene);
+      material.diffuseColor = Color3.FromHexString('#C0C0C0');
+      silo.material = material;
+      silo.position.y = 4;
+    }
+
+    return silo!;
+  }
+
+  private createLargeSiloPreview(): Mesh {
+    // Create main cylinder
+    const body = MeshBuilder.CreateCylinder('preview_large_silo_body', { height: 15, diameter: 8 }, this.scene);
+    
+    // Create conical top
+    const top = MeshBuilder.CreateCylinder('preview_large_silo_top', { height: 3, diameterTop: 1, diameterBottom: 8 }, this.scene);
+    top.position.y = 9;
+
+    // Create ladder
+    const ladder = MeshBuilder.CreateBox('preview_large_silo_ladder', { width: 0.3, height: 12, depth: 0.1 }, this.scene);
+    ladder.position.z = 4.1;
+
+    // Merge into single mesh
+    const largeSilo = Mesh.MergeMeshes([body, top, ladder], true, true);
+    
+    if (largeSilo) {
+      const material = new StandardMaterial('large_silo_preview_material', this.scene);
+      material.diffuseColor = Color3.FromHexString('#B0B0B0');
+      largeSilo.material = material;
+      largeSilo.position.y = 7.5;
+    }
+
+    return largeSilo!;
+  }
+
+  private createDefaultBuildingPreview(building: any): Mesh {
+    const previewMesh = MeshBuilder.CreateBox('preview_default', { width: building.dimensions.x, height: building.dimensions.y, depth: building.dimensions.z }, this.scene);
+    
+    const material = new StandardMaterial('default_preview_material', this.scene);
+    material.diffuseColor = Color3.FromHexString('#8B4513');
+    previewMesh.material = material;
+    previewMesh.position.y = building.dimensions.y / 2;
+    
+    return previewMesh;
   }
 
   private disposeGhostMesh(): void {

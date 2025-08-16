@@ -22,7 +22,7 @@ export interface SeedPrices {
 }
 
 export class EconomySystem {
-  private money: number = 10000;
+  private money: number = 100000;
   private inventory: Map<CropType, number> = new Map();
   private marketPrices!: MarketPrices;
   private seedPrices!: SeedPrices;
@@ -283,7 +283,7 @@ export class EconomySystem {
     marketPrices: MarketPrices;
     lastPriceUpdate: number;
   }): void {
-    this.money = saveData.money || 10000;
+    this.money = saveData.money || 100000;
 
     // Load inventory
     this.inventory.clear();
