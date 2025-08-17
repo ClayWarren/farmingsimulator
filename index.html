@@ -86,6 +86,8 @@
             <div>L - Animal Mode</div>
             <div>F - Feed Animals</div>
             <div>C - Collect Products</div>
+            <div>M - Toggle Mini-map</div>
+            <div>H - Toggle Headlights</div>
             <div>ESC - Pause</div>
           </div>
         </div>
@@ -94,6 +96,30 @@
           <div class="text-xs text-slate-400 mt-1">Vehicle: <span id="current-vehicle" class="text-white font-medium">On Foot</span></div>
           <div class="text-xs text-slate-400 mt-1">Attachment: <span id="current-attachment" class="text-white font-medium">None</span></div>
           <div id="vehicle-prompt" class="text-xs text-green-400 mt-2 hidden">Press E to enter vehicle</div>
+        </div>
+      </div>
+
+      <!-- Mini-map Component -->
+      <div id="mini-map-container" class="w-64 h-64 bg-black/90 border-2 border-slate-600 rounded-xl pointer-events-auto shadow-xl" style="position: fixed; bottom: 1rem; right: 1rem; z-index: 50;">
+        <div class="flex justify-between items-center p-3 border-b border-slate-500">
+          <h3 class="text-sm font-bold text-white">Farm Map</h3>
+          <div class="flex gap-2">
+            <button id="mini-map-zoom-out" class="text-slate-400 hover:text-white text-xs px-2 py-1 bg-slate-700 rounded">−</button>
+            <button id="mini-map-zoom-in" class="text-slate-400 hover:text-white text-xs px-2 py-1 bg-slate-700 rounded">+</button>
+            <button id="mini-map-toggle" class="text-slate-400 hover:text-white text-xs px-2 py-1 bg-slate-700 rounded">×</button>
+          </div>
+        </div>
+        <div class="relative w-full h-48 overflow-hidden">
+          <canvas id="mini-map-canvas" width="256" height="192" class="w-full h-full"></canvas>
+          <!-- Mini-map Legend -->
+          <div id="mini-map-legend" class="absolute bottom-2 left-2 text-xs text-slate-300 bg-black/70 rounded px-2 py-1">
+            <div class="flex items-center gap-1"><div class="w-2 h-2 bg-green-500 rounded-full"></div><span>Grass</span></div>
+            <div class="flex items-center gap-1"><div class="w-2 h-2 bg-amber-600 rounded-full"></div><span>Tilled</span></div>
+            <div class="flex items-center gap-1"><div class="w-2 h-2 bg-yellow-500 rounded-full"></div><span>Planted</span></div>
+            <div class="flex items-center gap-1"><div class="w-2 h-2 bg-lime-500 rounded-full"></div><span>Growing</span></div>
+            <div class="flex items-center gap-1"><div class="w-2 h-2 bg-blue-500 rounded-full"></div><span>Player</span></div>
+            <div class="flex items-center gap-1"><div class="w-2 h-2 bg-red-500 rounded-full"></div><span>Vehicle</span></div>
+          </div>
         </div>
       </div>
 

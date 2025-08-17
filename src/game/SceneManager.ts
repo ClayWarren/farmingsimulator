@@ -7,8 +7,6 @@ import {
   Texture,
   Vector3,
   Mesh,
-  DirectionalLight,
-  ShadowGenerator,
   GroundMesh,
   DynamicTexture,
   ImageProcessingConfiguration,
@@ -16,13 +14,14 @@ import {
 
 import { FarmExpansionSystem, LandPlot } from '../systems/FarmExpansionSystem';
 import { BuildingSystem } from '../systems/BuildingSystem';
+import { LightingSystem } from '../systems/LightingSystem';
 
 export class SceneManager {
   private scene: Scene;
   private farmExpansionSystem: FarmExpansionSystem;
   private buildingSystem: BuildingSystem;
+  private lightingSystem: LightingSystem | null = null;
   private placedBuildingMeshes: Mesh[] = [];
-  private shadowGenerator?: ShadowGenerator;
 
   constructor(scene: Scene, farmExpansionSystem: FarmExpansionSystem, buildingSystem: BuildingSystem) {
     this.scene = scene;
@@ -30,8 +29,12 @@ export class SceneManager {
     this.buildingSystem = buildingSystem;
   }
 
+  setLightingSystem(lightingSystem: LightingSystem): void {
+    this.lightingSystem = lightingSystem;
+  }
+
   initialize(): void {
-    this.setupLighting();
+    this.setupImageProcessing();
     this.createTerrain();
     this.createSkybox();
     this.addEnvironmentalDetails();
@@ -53,29 +56,17 @@ export class SceneManager {
         if (buildingMesh) {
           this.placedBuildingMeshes.push(buildingMesh);
           
-          // Add to shadow system
-          if (this.shadowGenerator) {
-            this.shadowGenerator.addShadowCaster(buildingMesh);
+          // Add to lighting system
+          if (this.lightingSystem) {
+            this.lightingSystem.addShadowCaster(buildingMesh);
+            this.lightingSystem.addShadowReceiver(buildingMesh);
           }
-          buildingMesh.receiveShadows = true;
         }
       }
     });
   }
 
-  private setupLighting(): void {
-    // Remove default light from Game.ts and create better lighting here
-    const sun = new DirectionalLight('sun', new Vector3(-0.5, -1, -0.3), this.scene);
-    sun.intensity = 3.0;
-    sun.diffuse = Color3.FromHexString('#FFF8DC');
-    sun.specular = Color3.FromHexString('#FFFAF0');
-    
-    // Enable shadows
-    this.shadowGenerator = new ShadowGenerator(2048, sun);
-    this.shadowGenerator.bias = 0.001;
-    this.shadowGenerator.normalBias = 0.02;
-    this.shadowGenerator.useCloseExponentialShadowMap = true;
-    
+  private setupImageProcessing(): void {
     // Set up tone mapping for more realistic lighting
     this.scene.imageProcessingConfiguration.exposure = 1.2;
     this.scene.imageProcessingConfiguration.contrast = 1.1;
@@ -113,11 +104,10 @@ export class SceneManager {
     
     ground.material = groundMaterial;
     ground.position.y = 0;
-    ground.receiveShadows = true;
-
-    // Add ground to shadow casters
-    if (this.shadowGenerator) {
-      this.shadowGenerator.addShadowCaster(ground);
+    
+    // Add to lighting system
+    if (this.lightingSystem) {
+      this.lightingSystem.addShadowReceiver(ground);
     }
 
     this.createFields();
@@ -213,10 +203,11 @@ export class SceneManager {
 
       field.material = fieldMaterial;
       field.position = new Vector3(pos.x, 0.05, pos.z);
-      field.receiveShadows = true;
       
-      if (this.shadowGenerator) {
-        this.shadowGenerator.addShadowCaster(field);
+      // Add to lighting system
+      if (this.lightingSystem) {
+        this.lightingSystem.addShadowCaster(field);
+        this.lightingSystem.addShadowReceiver(field);
       }
     });
   }
@@ -337,10 +328,11 @@ export class SceneManager {
     
     trunk.material = trunkMaterial;
     trunk.position = new Vector3(x, 4, z);
-    trunk.receiveShadows = true;
     
-    if (this.shadowGenerator) {
-      this.shadowGenerator.addShadowCaster(trunk);
+    // Add to lighting system
+    if (this.lightingSystem) {
+      this.lightingSystem.addShadowCaster(trunk);
+      this.lightingSystem.addShadowReceiver(trunk);
     }
 
     // Create foliage
@@ -357,10 +349,11 @@ export class SceneManager {
     
     foliage.material = foliageMaterial;
     foliage.position = new Vector3(x, 8 + Math.random() * 2, z);
-    foliage.receiveShadows = true;
     
-    if (this.shadowGenerator) {
-      this.shadowGenerator.addShadowCaster(foliage);
+    // Add to lighting system
+    if (this.lightingSystem) {
+      this.lightingSystem.addShadowCaster(foliage);
+      this.lightingSystem.addShadowReceiver(foliage);
     }
   }
 
@@ -387,10 +380,11 @@ export class SceneManager {
       rock.material = rockMaterial;
       rock.position = new Vector3(x, 0.5, z);
       rock.scaling = new Vector3(1, 0.6, 1); // Flatten slightly
-      rock.receiveShadows = true;
       
-      if (this.shadowGenerator) {
-        this.shadowGenerator.addShadowCaster(rock);
+      // Add to lighting system
+      if (this.lightingSystem) {
+        this.lightingSystem.addShadowCaster(rock);
+        this.lightingSystem.addShadowReceiver(rock);
       }
     }
   }

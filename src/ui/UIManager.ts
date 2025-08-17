@@ -8,6 +8,9 @@ import { FarmExpansionSystem } from '../systems/FarmExpansionSystem';
 import { BuildingSystem } from '../systems/BuildingSystem';
 import { LivestockSystem } from '../systems/LivestockSystem';
 import { AttachmentSystem, Attachment } from '../systems/AttachmentSystem';
+import { FieldStateSystem } from '../systems/FieldStateSystem';
+import { VehicleSystem } from '../systems/VehicleSystem';
+import { MiniMapSystem } from './MiniMapSystem';
 
 export class UIManager {
   private scene: Scene;
@@ -20,6 +23,9 @@ export class UIManager {
   private buildingSystem: BuildingSystem;
   private livestockSystem: LivestockSystem;
   private attachmentSystem: AttachmentSystem;
+  private fieldStateSystem: FieldStateSystem;
+  private vehicleSystem: VehicleSystem;
+  private miniMapSystem: MiniMapSystem;
   private isShopOpen: boolean = false;
   private currentShopCategory: number = 0;
   private onBuildingSelected?: (buildingId: string) => void;
@@ -34,7 +40,9 @@ export class UIManager {
     farmExpansionSystem: FarmExpansionSystem,
     buildingSystem: BuildingSystem,
     livestockSystem: LivestockSystem,
-    attachmentSystem: AttachmentSystem
+    attachmentSystem: AttachmentSystem,
+    fieldStateSystem: FieldStateSystem,
+    vehicleSystem: VehicleSystem
   ) {
     this.scene = scene;
     this.timeSystem = timeSystem;
@@ -46,12 +54,24 @@ export class UIManager {
     this.buildingSystem = buildingSystem;
     this.livestockSystem = livestockSystem;
     this.attachmentSystem = attachmentSystem;
+    this.fieldStateSystem = fieldStateSystem;
+    this.vehicleSystem = vehicleSystem;
+
+    // Initialize mini-map system
+    this.miniMapSystem = new MiniMapSystem(
+      this.fieldStateSystem,
+      this.vehicleSystem,
+      this.farmExpansionSystem,
+      this.buildingSystem,
+      this.cropSystem
+    );
   }
 
   initialize(): void {
     this.updateUI();
     this.setupPauseScreen();
     this.setupShop();
+    this.miniMapSystem.initialize();
     console.log('UI Manager initialized');
   }
 
@@ -59,6 +79,12 @@ export class UIManager {
     this.updateUI();
     this.updatePlotInfo();
     this.updateVehicleStatus();
+    
+    // Update mini-map with current player position
+    const camera = this.scene.activeCamera;
+    if (camera) {
+      this.miniMapSystem.update(camera.position);
+    }
   }
 
   private updatePlotInfo(): void {
@@ -576,5 +602,9 @@ export class UIManager {
 
   public setOnBuildingSelectedCallback(callback: (buildingId: string) => void): void {
     this.onBuildingSelected = callback;
+  }
+
+  toggleMiniMap(): void {
+    this.miniMapSystem.toggleMiniMap();
   }
 }

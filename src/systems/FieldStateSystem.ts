@@ -374,6 +374,14 @@ export class FieldStateSystem {
     }));
   }
 
+  getAllFields(): Array<{ position: Vector3; state: FieldState; cropType?: CropType }> {
+    return Array.from(this.fields.values()).map(field => ({
+      position: field.position.clone(),
+      state: field.state,
+      cropType: field.cropType,
+    }));
+  }
+
   loadSaveData(saveData: Array<{
     position: { x: number; y: number; z: number };
     state: FieldState;

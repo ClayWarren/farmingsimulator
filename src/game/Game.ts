@@ -3,7 +3,6 @@ import {
   Scene,
   FreeCamera,
   Vector3,
-  HemisphericLight,
   Color3,
   WebGPUEngine,
 } from '@babylonjs/core';
@@ -22,6 +21,7 @@ import { BuildingSystem } from '../systems/BuildingSystem';
 import { LivestockSystem } from '../systems/LivestockSystem';
 import { FieldStateSystem } from '../systems/FieldStateSystem';
 import { AttachmentSystem } from '../systems/AttachmentSystem';
+import { LightingSystem } from '../systems/LightingSystem';
 import { UIManager } from '../ui/UIManager';
 
 export class Game {
@@ -41,6 +41,7 @@ export class Game {
   private livestockSystem!: LivestockSystem;
   private fieldStateSystem!: FieldStateSystem;
   private attachmentSystem!: AttachmentSystem;
+  private lightingSystem!: LightingSystem;
   private uiManager!: UIManager;
   private audioManager!: AudioManager;
   private isPaused: boolean = false;
@@ -100,30 +101,26 @@ export class Game {
     camera.attachControl(this.canvas, true);
     camera.speed = 0.5;
 
-    const light = new HemisphericLight(
-      'light',
-      new Vector3(0.5, 1, 0.3),
-      this.scene
-    );
-    light.intensity = 1.2;
-    light.diffuse = Color3.FromHexString('#FFF8DC');
-    light.specular = Color3.FromHexString('#FFE4B5');
+    // Lighting will be handled by LightingSystem
   }
 
   private async initializeSystems(): Promise<void> {
     this.farmExpansionSystem = new FarmExpansionSystem();
     this.buildingSystem = new BuildingSystem();
     this.timeSystem = new TimeSystem();
+    this.lightingSystem = new LightingSystem(this.scene, this.timeSystem);
     this.weatherSystem = new WeatherSystem(this.scene);
     this.economySystem = new EconomySystem();
     this.economySystem.setBuildingSystem(this.buildingSystem);
     this.vehicleSystem = new VehicleSystem(this.scene);
+    this.vehicleSystem.setTimeSystem(this.timeSystem);
     this.equipmentSystem = new EquipmentSystem();
     this.attachmentSystem = new AttachmentSystem(this.scene);
     this.cropSystem = new CropSystem(this.scene, this.timeSystem, this.equipmentSystem, this.farmExpansionSystem, this.weatherSystem, this.attachmentSystem);
     this.fieldStateSystem = new FieldStateSystem(this.scene, this.cropSystem, this.timeSystem);
     this.livestockSystem = new LivestockSystem(this.scene, this.timeSystem, this.economySystem, this.farmExpansionSystem);
     this.sceneManager = new SceneManager(this.scene, this.farmExpansionSystem, this.buildingSystem);
+    this.sceneManager.setLightingSystem(this.lightingSystem);
     this.audioManager = new AudioManager();
     this.inputManager = new InputManager(
       this.scene,
@@ -149,13 +146,16 @@ export class Game {
       this.farmExpansionSystem,
       this.buildingSystem,
       this.livestockSystem,
-      this.attachmentSystem
+      this.attachmentSystem,
+      this.fieldStateSystem,
+      this.vehicleSystem
     );
 
     this.sceneManager.initialize();
     await this.audioManager.initialize();
     this.inputManager.initialize();
     this.timeSystem.initialize();
+    this.lightingSystem.initialize();
     this.weatherSystem.initialize();
     this.economySystem.initialize();
     this.vehicleSystem.initialize();
@@ -193,6 +193,10 @@ export class Game {
 
     this.uiManager.setOnBuildingSelectedCallback(buildingId => {
       this.inputManager.setSelectedBuilding(buildingId);
+    });
+
+    this.inputManager.setToggleMiniMapCallback(() => {
+      this.uiManager.toggleMiniMap();
     });
 
     this.vehicleSystem.setVehicleEnterCallback((vehicleName: string) => {
@@ -278,6 +282,7 @@ export class Game {
     const deltaTime = this.engine.getDeltaTime() / 1000;
 
     this.timeSystem.update(deltaTime);
+    this.lightingSystem.update();
     this.weatherSystem.update(deltaTime);
     this.economySystem.update(deltaTime);
     this.vehicleSystem.update(deltaTime);
@@ -318,6 +323,7 @@ export class Game {
 
   restartGame(): void {
     this.timeSystem.initialize();
+    this.lightingSystem.initialize();
     this.weatherSystem.initialize();
     this.economySystem.initialize();
     this.vehicleSystem.initialize();

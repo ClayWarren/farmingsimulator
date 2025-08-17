@@ -6,7 +6,9 @@ import {
   Vector3,
   Mesh,
   FreeCamera,
+  SpotLight,
 } from '@babylonjs/core';
+import { TimeSystem } from './TimeSystem';
 
 export interface Vehicle {
   id: string;
@@ -17,10 +19,16 @@ export interface Vehicle {
   speed: number;
   maxSpeed: number;
   isOccupied: boolean;
+  headlights: {
+    left: SpotLight;
+    right: SpotLight;
+    enabled: boolean;
+  } | null;
 }
 
 export class VehicleSystem {
   private scene: Scene;
+  private timeSystem: TimeSystem | null = null;
   private vehicles: Map<string, Vehicle> = new Map();
   private playerCamera: FreeCamera;
   private currentVehicle: Vehicle | null = null;
@@ -31,6 +39,10 @@ export class VehicleSystem {
   constructor(scene: Scene) {
     this.scene = scene;
     this.playerCamera = scene.activeCamera as FreeCamera;
+  }
+
+  setTimeSystem(timeSystem: TimeSystem): void {
+    this.timeSystem = timeSystem;
   }
 
   initialize(): void {
@@ -54,6 +66,7 @@ export class VehicleSystem {
       speed: 0,
       maxSpeed: 25,
       isOccupied: false,
+      headlights: this.createHeadlights(tractorMesh),
     };
 
     tractorMesh.position = tractor.position.clone();
@@ -72,6 +85,7 @@ export class VehicleSystem {
       speed: 0,
       maxSpeed: 15, // Slower than tractor but more powerful
       isOccupied: false,
+      headlights: this.createHeadlights(combineHarvesterMesh),
     };
 
     combineHarvesterMesh.position = combineHarvester.position.clone();
@@ -338,6 +352,9 @@ export class VehicleSystem {
     if (this.currentVehicle && this.vehicleCamera) {
       this.updateVehicleCamera();
     }
+
+    // Update headlights based on time of day
+    this.updateHeadlights();
   }
 
 
@@ -545,5 +562,80 @@ export class VehicleSystem {
     }
 
     console.log('Vehicle system data loaded');
+  }
+
+  private createHeadlights(vehicleMesh: Mesh): { left: SpotLight; right: SpotLight; enabled: boolean } {
+    // Create left headlight
+    const leftHeadlight = new SpotLight(
+      `headlight_left_${vehicleMesh.name}`,
+      new Vector3(1.2, 1.5, 2.5), // Position relative to vehicle front
+      new Vector3(0, -0.2, 1), // Direction pointing forward and slightly down
+      Math.PI / 6, // 30 degree cone angle
+      2, // Exponent for falloff
+      this.scene
+    );
+    
+    // Create right headlight  
+    const rightHeadlight = new SpotLight(
+      `headlight_right_${vehicleMesh.name}`,
+      new Vector3(-1.2, 1.5, 2.5), // Position relative to vehicle front
+      new Vector3(0, -0.2, 1), // Direction pointing forward and slightly down
+      Math.PI / 6, // 30 degree cone angle
+      2, // Exponent for falloff
+      this.scene
+    );
+
+    // Configure headlight properties
+    [leftHeadlight, rightHeadlight].forEach(light => {
+      light.diffuse = Color3.FromHexString('#FFFACD'); // Warm white
+      light.specular = Color3.FromHexString('#FFFFFF'); // Bright white
+      light.intensity = 0.8;
+      light.range = 50; // Light reaches 50 units
+      light.setDirectionToTarget(new Vector3(0, -5, 25)); // Point ahead and down
+      
+      // Parent to vehicle so lights move with it
+      light.parent = vehicleMesh;
+      
+      // Start disabled
+      light.setEnabled(false);
+    });
+
+    return {
+      left: leftHeadlight,
+      right: rightHeadlight,
+      enabled: false
+    };
+  }
+
+  private updateHeadlights(): void {
+    if (!this.timeSystem) return;
+    
+    const timeData = this.timeSystem.getTimeData();
+    const timeOfDay = timeData.hour + (timeData.minute / 60);
+    const isNight = timeOfDay < 6 || timeOfDay > 18; // Auto-enable at night
+    
+    this.vehicles.forEach(vehicle => {
+      if (vehicle.headlights) {
+        const shouldBeOn = isNight && vehicle.isOccupied;
+        
+        if (shouldBeOn !== vehicle.headlights.enabled) {
+          vehicle.headlights.left.setEnabled(shouldBeOn);
+          vehicle.headlights.right.setEnabled(shouldBeOn);
+          vehicle.headlights.enabled = shouldBeOn;
+        }
+      }
+    });
+  }
+
+  toggleHeadlights(vehicleId?: string): void {
+    const vehicle = vehicleId ? this.vehicles.get(vehicleId) : this.currentVehicle;
+    if (!vehicle || !vehicle.headlights) return;
+    
+    const newState = !vehicle.headlights.enabled;
+    vehicle.headlights.left.setEnabled(newState);
+    vehicle.headlights.right.setEnabled(newState);
+    vehicle.headlights.enabled = newState;
+    
+    console.log(`Headlights ${newState ? 'ON' : 'OFF'} for ${vehicle.name}`);
   }
 }

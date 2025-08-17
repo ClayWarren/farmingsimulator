@@ -31,6 +31,8 @@ A modern farming simulation game built with TypeScript and Babylon.js.
 - **L** - Toggle animal mode
 - **F** - Feed all animals
 - **C** - Collect animal products
+- **M** - Toggle Mini-map
+- **H** - Toggle headlights (when in vehicle)
 - **ESC** - Pause game (or release cursor if locked)
 
 ## Development
@@ -83,14 +85,17 @@ src/
 │   ├── WeatherSystem.ts      # Weather simulation with crop effects
 │   ├── CropSystem.ts         # Crop lifecycle with weather integration
 │   ├── EconomySystem.ts      # Market and inventory system
-│   ├── VehicleSystem.ts      # Vehicle physics and interaction
+│   ├── VehicleSystem.ts      # Vehicle physics and headlight system
 │   ├── EquipmentSystem.ts    # Equipment shop and upgrades
 │   ├── BuildingSystem.ts     # Building placement and management
 │   ├── FarmExpansionSystem.ts # Land plot purchasing
 │   ├── FieldStateSystem.ts   # Visual field state changes
-│   └── LivestockSystem.ts    # Animal management and production
+│   ├── LivestockSystem.ts    # Animal management and production
+│   ├── AttachmentSystem.ts   # Vehicle attachments and implements
+│   └── LightingSystem.ts     # Dynamic lighting and shadows
 ├── ui/
-│   └── UIManager.ts        # User interface management
+│   ├── UIManager.ts        # User interface management
+│   └── MiniMapSystem.ts    # Real-time mini-map visualization
 └── main.ts                 # Application entry point
 ```
 
@@ -129,6 +134,9 @@ src/
 - ✅ **Attachment system** with plow, seeder, and cultivator implements
 - ✅ **Auto-save/auto-load** system maintaining progress across browser sessions
 - ✅ **Working area effects** for attachments enabling multi-field operations
+- ✅ **Dynamic lighting system** with realistic day/night cycle and atmospheric lighting
+- ✅ **Mini-map system** with real-time field visualization and vehicle tracking
+- ✅ **Vehicle headlights** for safe night driving with automatic and manual control
 
 ## Crop System Details
 
@@ -373,6 +381,75 @@ src/
 - **Enhanced Efficiency**: Attachments provide speed bonuses and larger working areas
 - **Visual Feedback**: Enhanced field state visuals show attachment work patterns
 
+## Dynamic Lighting System
+
+### **Realistic Day/Night Cycle**:
+- **Dynamic sun positioning**: Sun moves across sky based on game time
+- **Color temperature changes**: Warm sunrise/sunset, cool blue nights
+- **Atmospheric lighting**: Sky color transitions throughout the day
+- **Shadow system**: Real-time shadows that follow the sun's position
+
+### **Time-Based Lighting Phases**:
+- **Sunrise** (5:30-7:00 AM): Warm orange-red transitioning to bright daylight
+- **Daytime** (7:00 AM-5:00 PM): Clear bright lighting with realistic shadows
+- **Sunset** (5:00-6:30 PM): Golden hour lighting with warm tones
+- **Night** (6:30 PM-5:30 AM): Cool blue moonlight with minimal shadows
+
+### **Advanced Shadow Rendering**:
+- **PBR integration**: Physically-based rendering with proper shadow casting
+- **Performance optimized**: Efficient shadow generation with quality controls
+- **Dynamic intensity**: Shadow darkness adjusts with lighting conditions
+
+## Vehicle Headlight System
+
+### **Automatic Headlights**:
+- **Smart activation**: Automatically turn on during night hours (6 PM - 6 AM)
+- **Vehicle integration**: Only activate when player is driving
+- **Real-time detection**: Uses time system for automatic on/off
+
+### **Manual Control**:
+- **H key toggle**: Press H to manually turn headlights on/off anytime
+- **Override capability**: Manual control works regardless of time of day
+- **Console feedback**: Visual confirmation of headlight status
+
+### **Realistic Lighting**:
+- **Dual spotlight system**: Left and right headlights per vehicle
+- **Warm white illumination**: Realistic automotive lighting color
+- **50-unit range**: Lights illuminate farming areas effectively
+- **Vehicle-following**: Headlights move and rotate with vehicle direction
+
+### **Technical Features**:
+- **SpotLight implementation**: 30° cone angle with proper falloff
+- **Parent attachment**: Lights are bound to vehicle for seamless movement
+- **Performance conscious**: Lights disabled when not needed
+
+## Mini-Map System
+
+### **Real-Time Farm Overview**:
+- **Live field visualization**: Shows field states with color-coded indicators
+- **Vehicle tracking**: Real-time position and direction of all vehicles
+- **Player location**: Blue dot shows current player position
+- **Building display**: All placed structures visible on map
+
+### **Interactive Features**:
+- **Zoom controls**: + and - buttons for detailed/overview viewing
+- **Toggle visibility**: M key or × button to show/hide mini-map
+- **Fixed positioning**: Bottom-right corner positioning
+- **Legend system**: Color-coded legend explains all map elements
+
+### **Visual Field States**:
+- **Green**: Untilled grass areas
+- **Brown**: Tilled soil ready for planting
+- **Yellow**: Planted crops growing
+- **Bright Green**: Mature crops ready for harvest
+- **Blue**: Player position marker
+- **Red**: Vehicle positions with direction indicators
+
+### **Performance Optimized**:
+- **Canvas-based rendering**: Efficient 2D rendering system
+- **Update throttling**: Only redraws when player moves significantly
+- **Scalable zoom**: 0.3x to 3.0x zoom range for flexibility
+
 ## Roadmap
 
 - [x] ~~Economic system with crop selling and money management~~
@@ -389,6 +466,9 @@ src/
 - [x] ~~Attachment system with visual implements~~
 - [x] ~~Auto-save and auto-load functionality~~
 - [x] ~~Working area effects for multi-field operations~~
+- [x] ~~Dynamic lighting system with day/night cycle~~
+- [x] ~~Mini-map system with real-time visualization~~
+- [x] ~~Vehicle headlights for night driving~~
 - [ ] Multiplayer farming
 - [ ] Advanced farming equipment
 - [ ] Seasonal crop varieties

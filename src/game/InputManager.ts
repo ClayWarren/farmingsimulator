@@ -35,6 +35,7 @@ export class InputManager {
   private onShop?: () => void;
   private onToggleBuildMode?: (isBuildMode: boolean) => void;
   private onBuildingPlaced?: () => void;
+  private onToggleMiniMap?: () => void;
   private currentBuildingId?: string;
   private ghostMesh?: Mesh;
   private isAnimalMode: boolean = false;
@@ -189,6 +190,18 @@ export class InputManager {
           if (kbInfo.type === 1) {
             console.log('=== DEBUG: Listing attachment meshes ===');
             this.attachmentSystem.debugListAttachmentMeshes();
+          }
+          break;
+        case 'KeyH':
+          if (kbInfo.type === 1) {
+            this.vehicleSystem.toggleHeadlights();
+          }
+          break;
+        case 'KeyM':
+          if (kbInfo.type === 1) {
+            if (this.onToggleMiniMap) {
+              this.onToggleMiniMap();
+            }
           }
           break;
         case 'Escape':
@@ -720,6 +733,10 @@ export class InputManager {
 
   setBuildingPlacedCallback(callback: () => void): void {
     this.onBuildingPlaced = callback;
+  }
+
+  setToggleMiniMapCallback(callback: () => void): void {
+    this.onToggleMiniMap = callback;
   }
 
   setSelectedBuilding(buildingId: string): void {

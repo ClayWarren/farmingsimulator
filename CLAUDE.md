@@ -102,7 +102,7 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Dual-mode input: walking vs. vehicle controls using same WASD keys
 - Pointer lock for mouse look controls
 - Ray casting for ground interaction and crop placement
-- Keyboard shortcuts: 1-4 (crop selection), R (sell all), E (vehicle), P (shop), B (build mode), L (animal mode), F (feed animals), C (collect products), T (till soil), Q (switch attachment), Z (debug), Space (plant/harvest/place), ESC (pause)
+- Keyboard shortcuts: 1-4 (crop selection), R (sell all), E (vehicle), P (shop), B (build mode), L (animal mode), F (feed animals), C (collect products), T (till soil), Q (switch attachment), Z (debug), M (mini-map), H (headlights), Space (plant/harvest/place), ESC (pause)
 - Pause system: ESC key toggles pause state with scene control management
 - Shop system: P key opens equipment shop with category navigation
 - Building system: B key toggles building mode with ghost preview and collision detection
@@ -341,6 +341,67 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Equipment ownership and upgrade effects
 - All farming progress and economic state
 
+## Dynamic Lighting System
+
+### **Realistic Day/Night Cycle**:
+- **Sun positioning**: Dynamic sun movement based on TimeSystem hour/minute data
+- **Color temperature**: Warm sunrise/sunset, cool blue nights, bright daytime
+- **Shadow generation**: Real-time shadows using DirectionalLight and ShadowGenerator
+- **Atmospheric effects**: Sky color transitions and ambient lighting changes
+
+### **Technical Implementation**:
+- **LightingSystem.ts**: Central lighting management with time-based updates
+- **Shadow quality**: 2048px shadow maps with PCF filtering and proper bias
+- **Performance optimization**: Shadow distance limits and dynamic intensity
+- **SceneManager integration**: Automatic shadow caster/receiver assignment
+
+### **Lighting Phases**:
+- **Night** (< 5.5 or > 18.5 hours): Cool blue lighting with minimal shadows
+- **Sunrise** (5.5-7 hours): Warm orange-red transitioning to daylight
+- **Day** (7-17 hours): Bright neutral lighting with full shadow casting
+- **Sunset** (17-18.5 hours): Golden hour with warm atmospheric lighting
+
+## Vehicle Headlight System
+
+### **Automatic Operation**:
+- **Time-based activation**: Headlights automatically turn on during night hours (18:00-06:00)
+- **Occupancy detection**: Only activate when player is driving the vehicle
+- **TimeSystem integration**: Uses time data for smart on/off decisions
+
+### **Manual Control**:
+- **H key toggle**: Manual override for headlight control regardless of time
+- **Per-vehicle state**: Each vehicle maintains independent headlight status
+- **Console feedback**: Visual confirmation of headlight state changes
+
+### **Technical Features**:
+- **Dual SpotLight system**: Left and right headlights per vehicle
+- **Parent attachment**: Lights move and rotate with vehicle automatically
+- **Realistic properties**: 30° cone angle, 50-unit range, warm white color
+- **Performance conscious**: Lights disabled when not needed
+
+## Mini-Map System
+
+### **Real-Time Visualization**:
+- **Canvas-based rendering**: Efficient 2D drawing system using HTML5 Canvas
+- **Live data integration**: Field states, vehicles, buildings, and player position
+- **Color-coded legend**: Visual indicators for different map elements
+
+### **Interactive Features**:
+- **Zoom system**: 0.3x to 3.0x zoom range with +/- buttons
+- **Toggle control**: M key or × button for show/hide functionality
+- **Fixed positioning**: Bottom-right placement with proper z-indexing
+
+### **Performance Optimization**:
+- **Update throttling**: Only redraws when player moves significantly (> 1 unit)
+- **Visible area culling**: Only renders elements within current view bounds
+- **Efficient scaling**: Dynamic element sizing based on zoom level
+
+### **Data Sources**:
+- **FieldStateSystem**: Real-time field state colors and positions
+- **VehicleSystem**: Vehicle positions, rotations, and direction indicators
+- **BuildingSystem**: All placed structures with proper scaling
+- **CropSystem**: Crop positions and growth stage visualization
+
 ### Extension Points
 
 - Add new crop types by extending CropType union and cropInfo record
@@ -360,3 +421,7 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Attachment types added to AttachmentSystem catalog with effects, pricing, and 3D models
 - Auto-save interval configurable via handleAutoSave method
 - Working area effects implemented for any attachment type via getPlantingPositions
+- Lighting system integrates with TimeSystem for automatic day/night transitions
+- Vehicle headlights automatically activate during night driving with manual override
+- Mini-map system provides real-time visualization with zoom and legend features
+- Shadow casting meshes added via LightingSystem.addShadowCaster() method
