@@ -52,16 +52,19 @@ export class FieldStateSystem {
     if (!fieldData) {
       // Create new field if it doesn't exist
       this.createField(position, newState);
+      console.log(`Created new field at (${position.x}, ${position.z}) with state: ${newState}`);
       return;
     }
 
     const timeData = this.timeSystem.getTimeData();
+    const oldState = fieldData.state;
     fieldData.state = newState;
     fieldData.lastStateChange = timeData.day;
     if (cropType) {
       fieldData.cropType = cropType;
     }
 
+    console.log(`Updated field at (${position.x}, ${position.z}) from ${oldState} to ${newState}`);
     this.updateFieldVisual(key, fieldData);
   }
 
@@ -121,9 +124,9 @@ export class FieldStateSystem {
   private createFieldMesh(fieldData: FieldData): Mesh | null {
     const mesh = Mesh.CreatePlane(`field_${fieldData.state}_${fieldData.position.x}_${fieldData.position.z}`, 2, this.scene);
     
-    // Position the field mesh slightly above ground
+    // Position the field mesh slightly above ground for better visibility
     mesh.position = fieldData.position.clone();
-    mesh.position.y = 0.01;
+    mesh.position.y = 0.05; // Raised higher for better visibility
     mesh.rotation.x = Math.PI / 2; // Rotate to lie flat
 
     // Create material based on field state
@@ -141,9 +144,11 @@ export class FieldStateSystem {
         break;
       case 'tilled':
         material.albedoColor = Color3.FromHexString('#8B4513'); // Brown soil
+        material.emissiveColor = Color3.FromHexString('#8B4513').scale(0.1); // Slight glow
         break;
       case 'planted':
-        material.albedoColor = Color3.FromHexString('#654321'); // Dark soil with seeds
+        material.albedoColor = Color3.FromHexString('#A0522D'); // More distinct brown for planted soil
+        material.emissiveColor = Color3.FromHexString('#A0522D').scale(0.15); // Slight glow for visibility
         break;
       case 'growing':
         material.albedoColor = Color3.FromHexString('#556B2F'); // Green with soil
@@ -252,14 +257,25 @@ export class FieldStateSystem {
   }
 
   private drawPlantedPattern(context: CanvasRenderingContext2D): void {
-    // Draw small seed dots
-    for (let i = 0; i < 20; i++) {
-      const x = Math.random() * 128;
-      const y = Math.random() * 128;
-      context.fillStyle = `rgba(${80 + Math.random() * 30}, ${50 + Math.random() * 20}, ${30 + Math.random() * 15}, 0.9)`;
-      context.beginPath();
-      context.arc(x, y, 1, 0, Math.PI * 2);
-      context.fill();
+    // Draw more visible planted pattern with furrows and seed dots
+    
+    // Draw planting furrows (horizontal lines)
+    for (let i = 0; i < 6; i++) {
+      const y = i * 20 + 10;
+      context.fillStyle = `rgba(${60 + Math.random() * 20}, ${40 + Math.random() * 15}, ${20 + Math.random() * 10}, 0.8)`;
+      context.fillRect(0, y, 128, 3);
+    }
+    
+    // Draw seed dots in rows
+    for (let row = 0; row < 6; row++) {
+      for (let col = 0; col < 8; col++) {
+        const x = col * 16 + 8 + Math.random() * 4;
+        const y = row * 20 + 10 + Math.random() * 3;
+        context.fillStyle = `rgba(${100 + Math.random() * 30}, ${70 + Math.random() * 20}, ${40 + Math.random() * 15}, 0.9)`;
+        context.beginPath();
+        context.arc(x, y, 1.5, 0, Math.PI * 2);
+        context.fill();
+      }
     }
   }
 

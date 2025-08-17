@@ -14,6 +14,7 @@ import { TimeSystem, TimeData } from './TimeSystem';
 import { EquipmentSystem } from './EquipmentSystem';
 import { FarmExpansionSystem } from './FarmExpansionSystem';
 import { WeatherSystem } from './WeatherSystem';
+import { AttachmentSystem } from './AttachmentSystem';
 
 export type CropType = 'wheat' | 'corn' | 'potato' | 'carrot';
 
@@ -40,6 +41,7 @@ export class CropSystem {
   private equipmentSystem: EquipmentSystem;
   private farmExpansionSystem: FarmExpansionSystem;
   private weatherSystem: WeatherSystem;
+  private attachmentSystem: AttachmentSystem;
   private crops: Map<string, CropData> = new Map();
   private cropTemplates: Map<CropType, Mesh> = new Map();
 
@@ -74,12 +76,13 @@ export class CropSystem {
     },
   };
 
-  constructor(scene: Scene, timeSystem: TimeSystem, equipmentSystem: EquipmentSystem, farmExpansionSystem: FarmExpansionSystem, weatherSystem: WeatherSystem) {
+  constructor(scene: Scene, timeSystem: TimeSystem, equipmentSystem: EquipmentSystem, farmExpansionSystem: FarmExpansionSystem, weatherSystem: WeatherSystem, attachmentSystem: AttachmentSystem) {
     this.scene = scene;
     this.timeSystem = timeSystem;
     this.equipmentSystem = equipmentSystem;
     this.farmExpansionSystem = farmExpansionSystem;
     this.weatherSystem = weatherSystem;
+    this.attachmentSystem = attachmentSystem;
   }
 
   initialize(): void {
@@ -303,19 +306,32 @@ export class CropSystem {
 
     this.crops.delete(key);
 
-    // Apply equipment and weather effects to yield
+    // Apply equipment, attachment, and weather effects to yield
     const equipmentEffects = this.equipmentSystem.getEquipmentEffects();
     const weatherData = this.weatherSystem.getWeatherData();
     
+    // Get attachment effects from current vehicle
+    let attachmentEffects = {};
+    // For now, we'll assume the tractor is the first vehicle - this could be improved
+    const vehicles = ['tractor_1', 'combine_harvester_1'];
+    for (const vehicleId of vehicles) {
+      const effects = this.attachmentSystem.getAttachmentEffects(vehicleId);
+      if (effects && Object.keys(effects).length > 0) {
+        attachmentEffects = effects;
+        break;
+      }
+    }
+    
     const baseAmount = Math.floor(Math.random() * 3) + 2;
     const equipmentMultiplier = equipmentEffects.cropYield || 1.0;
+    const attachmentMultiplier = (attachmentEffects as any).efficiency || 1.0;
     const weatherMultiplier = this.getWeatherYieldMultiplier(weatherData.type);
-    const totalMultiplier = equipmentMultiplier * weatherMultiplier;
+    const totalMultiplier = equipmentMultiplier * attachmentMultiplier * weatherMultiplier;
     
     const modifiedAmount = Math.floor(baseAmount * totalMultiplier);
     const finalAmount = Math.max(1, modifiedAmount);
     
-    console.log(`Harvested ${crop.type}, got ${finalAmount} units (base: ${baseAmount}, equipment bonus: ${((equipmentMultiplier - 1) * 100).toFixed(0)}%, weather bonus: ${((weatherMultiplier - 1) * 100).toFixed(0)}%)`);
+    console.log(`Harvested ${crop.type}, got ${finalAmount} units (base: ${baseAmount}, equipment bonus: ${((equipmentMultiplier - 1) * 100).toFixed(0)}%, attachment bonus: ${((attachmentMultiplier - 1) * 100).toFixed(0)}%, weather bonus: ${((weatherMultiplier - 1) * 100).toFixed(0)}%)`);
 
     return {
       type: crop.type,

@@ -21,6 +21,7 @@ import { FarmExpansionSystem } from '../systems/FarmExpansionSystem';
 import { BuildingSystem } from '../systems/BuildingSystem';
 import { LivestockSystem } from '../systems/LivestockSystem';
 import { FieldStateSystem } from '../systems/FieldStateSystem';
+import { AttachmentSystem } from '../systems/AttachmentSystem';
 import { UIManager } from '../ui/UIManager';
 
 export class Game {
@@ -39,10 +40,12 @@ export class Game {
   private buildingSystem!: BuildingSystem;
   private livestockSystem!: LivestockSystem;
   private fieldStateSystem!: FieldStateSystem;
+  private attachmentSystem!: AttachmentSystem;
   private uiManager!: UIManager;
   private audioManager!: AudioManager;
   private isPaused: boolean = false;
   private lastWeatherType: string = '';
+  private lastAutoSaveTime: number = 0;
 
   constructor() {
     this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
@@ -116,7 +119,8 @@ export class Game {
     this.economySystem.setBuildingSystem(this.buildingSystem);
     this.vehicleSystem = new VehicleSystem(this.scene);
     this.equipmentSystem = new EquipmentSystem();
-    this.cropSystem = new CropSystem(this.scene, this.timeSystem, this.equipmentSystem, this.farmExpansionSystem, this.weatherSystem);
+    this.attachmentSystem = new AttachmentSystem(this.scene);
+    this.cropSystem = new CropSystem(this.scene, this.timeSystem, this.equipmentSystem, this.farmExpansionSystem, this.weatherSystem, this.attachmentSystem);
     this.fieldStateSystem = new FieldStateSystem(this.scene, this.cropSystem, this.timeSystem);
     this.livestockSystem = new LivestockSystem(this.scene, this.timeSystem, this.economySystem, this.farmExpansionSystem);
     this.sceneManager = new SceneManager(this.scene, this.farmExpansionSystem, this.buildingSystem);
@@ -132,6 +136,7 @@ export class Game {
       this.buildingSystem,
       this.livestockSystem,
       this.fieldStateSystem,
+      this.attachmentSystem,
       this.audioManager
     );
     this.uiManager = new UIManager(
@@ -143,7 +148,8 @@ export class Game {
       this.equipmentSystem,
       this.farmExpansionSystem,
       this.buildingSystem,
-      this.livestockSystem
+      this.livestockSystem,
+      this.attachmentSystem
     );
 
     this.sceneManager.initialize();
@@ -154,6 +160,7 @@ export class Game {
     this.economySystem.initialize();
     this.vehicleSystem.initialize();
     this.equipmentSystem.initialize();
+    this.attachmentSystem.initialize();
     this.farmExpansionSystem.initialize();
     this.buildingSystem.initialize();
     this.livestockSystem.initialize();
@@ -187,6 +194,17 @@ export class Game {
     this.uiManager.setOnBuildingSelectedCallback(buildingId => {
       this.inputManager.setSelectedBuilding(buildingId);
     });
+
+    this.vehicleSystem.setVehicleEnterCallback((vehicleName: string) => {
+      this.uiManager.updateVehicleDisplay(vehicleName);
+    });
+
+    this.vehicleSystem.setVehicleExitCallback(() => {
+      this.uiManager.updateVehicleDisplay('On Foot');
+    });
+
+    // Auto-load existing save on startup
+    this.autoLoadOnStartup();
   }
 
   private startAmbientSounds(): void {
@@ -270,12 +288,21 @@ export class Game {
     this.inputManager.update(deltaTime);
     this.uiManager.update();
 
+    // Update vehicle attachments - ensure all attachments are properly parented
+    const vehicles = this.vehicleSystem.getVehicles();
+    vehicles.forEach((vehicle, vehicleId) => {
+      this.attachmentSystem.updateVehicleAttachment(vehicleId, vehicle.mesh);
+    });
+
     // Update weather sounds when weather changes
     const currentWeather = this.weatherSystem.getWeatherData().type;
     if (currentWeather !== this.lastWeatherType) {
       this.updateWeatherSounds();
       this.lastWeatherType = currentWeather;
     }
+
+    // Auto-save every 5 minutes of game time
+    this.handleAutoSave();
   }
 
   togglePause(): void {
@@ -295,6 +322,7 @@ export class Game {
     this.economySystem.initialize();
     this.vehicleSystem.initialize();
     this.equipmentSystem.initialize();
+    this.attachmentSystem.initialize();
     this.farmExpansionSystem.initialize();
     this.buildingSystem.initialize();
     this.livestockSystem.initialize();
@@ -326,6 +354,7 @@ export class Game {
         buildingData: this.buildingSystem.getSaveData(),
         livestockData: this.livestockSystem.getSaveData(),
         fieldStateData: this.fieldStateSystem.getSaveData(),
+        attachmentData: this.attachmentSystem.getSaveData(),
         playerPosition: SaveManager.vector3ToObject(camera.position),
         playerRotation: SaveManager.vector3ToObject(camera.rotation),
       };
@@ -371,6 +400,11 @@ export class Game {
         this.fieldStateSystem.loadSaveData(saveData.fieldStateData);
       }
 
+      // Load attachment data if available
+      if (saveData.attachmentData) {
+        this.attachmentSystem.loadSaveData(saveData.attachmentData);
+      }
+
       // Restore player position and rotation
       const camera = this.scene.activeCamera as FreeCamera;
       camera.position = SaveManager.objectToVector3(saveData.playerPosition);
@@ -403,6 +437,31 @@ export class Game {
 
   getAudioManager(): AudioManager {
     return this.audioManager;
+  }
+
+  private handleAutoSave(): void {
+    const currentTime = Date.now();
+    const autoSaveInterval = 300000; // 5 minutes in milliseconds
+    
+    if (currentTime - this.lastAutoSaveTime >= autoSaveInterval) {
+      this.saveGame();
+      console.log('Auto-saved game progress');
+      this.lastAutoSaveTime = currentTime;
+    }
+  }
+
+  private autoLoadOnStartup(): void {
+    // Check if there's existing save data and load it automatically
+    if (this.hasSaveData()) {
+      const success = this.loadGame();
+      if (success) {
+        console.log('Auto-loaded previous game save');
+      } else {
+        console.log('Auto-load failed, starting fresh');
+      }
+    } else {
+      console.log('No existing save data, starting new game');
+    }
   }
 
   purchaseEquipment(equipmentId: string): boolean {

@@ -33,6 +33,7 @@ The game follows an **Entity-Component-System (ECS) inspired architecture** with
    - `EconomySystem` - Market prices, money, inventory management
    - `VehicleSystem` - Driveable tractor with physics and camera switching
    - `EquipmentSystem` - Equipment shop, ownership, and upgrade effects
+   - `AttachmentSystem` - Vehicle attachments with working area effects and 3D visuals
    - `BuildingSystem` - Building placement, collision detection, and management
    - `FarmExpansionSystem` - Land plot purchasing and ownership validation
    - `LivestockSystem` - Animal management, feeding, and product collection
@@ -48,7 +49,7 @@ The game follows an **Entity-Component-System (ECS) inspired architecture** with
 Systems must be initialized in this specific order due to dependencies:
 
 ```
-SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem → VehicleSystem → EquipmentSystem → FarmExpansionSystem → BuildingSystem → LivestockSystem → CropSystem → FieldStateSystem → InputManager → UIManager
+SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem → VehicleSystem → EquipmentSystem → AttachmentSystem → FarmExpansionSystem → BuildingSystem → LivestockSystem → CropSystem → FieldStateSystem → InputManager → UIManager
 ```
 
 ### Key Architectural Patterns
@@ -101,7 +102,7 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Dual-mode input: walking vs. vehicle controls using same WASD keys
 - Pointer lock for mouse look controls
 - Ray casting for ground interaction and crop placement
-- Keyboard shortcuts: 1-4 (crop selection), R (sell all), E (vehicle), P (shop), B (build mode), L (animal mode), F (feed animals), C (collect products), T (till soil), Space (plant/harvest/place), ESC (pause)
+- Keyboard shortcuts: 1-4 (crop selection), R (sell all), E (vehicle), P (shop), B (build mode), L (animal mode), F (feed animals), C (collect products), T (till soil), Q (switch attachment), Z (debug), Space (plant/harvest/place), ESC (pause)
 - Pause system: ESC key toggles pause state with scene control management
 - Shop system: P key opens equipment shop with category navigation
 - Building system: B key toggles building mode with ghost preview and collision detection
@@ -180,18 +181,23 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 
 ### **Save System Features**:
 - LocalStorage-based persistence across browser sessions
+- Auto-save every 5 minutes during gameplay
+- Auto-load on game startup for seamless experience
+- Manual save/load via pause menu
 - Version control for save format compatibility
 - Error handling with graceful fallbacks
 - Automatic cleanup and memory management
 - Field state data: visual field states and state change timestamps
+- Attachment data: owned attachments and vehicle attachment states
 
 ## Shop System
 
 ### **Shop Interface**:
-- Category-based navigation (Tools, Vehicles, Storage, Processing)
+- Category-based navigation (Tools, Vehicles, Storage, Processing, Attachments)
 - Real-time affordability checking with dynamic button states
 - Equipment effect visualization with percentage bonuses
 - Purchase confirmation with audio feedback
+- Attachment auto-equipping for purchased implements
 
 ### **Economic Integration**:
 - Seamless integration with economy system for purchases
@@ -276,6 +282,64 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Can only till untilled or stubble fields (prevents invalid operations)
 - Planting now requires tilled fields with helpful error messages
 - Enhanced tilled field textures with furrow lines, soil ridges, and clumps
+- Working area support for attachments enabling multi-field tilling
+
+## Attachment System
+
+### **Attachment Types and Effects**:
+- **Heavy Plow**: 2x tilling speed, 3x3 working area, +50% efficiency ($5,000)
+- **Precision Seeder**: 2.5x planting speed, 3x3 working area, +80% efficiency ($7,500)
+- **Field Cultivator**: 1.5x tilling/planting speed, 2x2 working area, +30% efficiency ($4,000)
+
+### **Visual System**:
+- 3D attachment meshes created procedurally using Babylon.js
+- Automatic parenting to vehicle meshes for movement
+- Plow: Brown metal with angled blades for soil cutting
+- Seeder: Blue frame with hoppers and planting discs
+- Cultivator: Green frame with multiple tines for soil breaking
+- Fallback mesh creation for error handling
+
+### **Working Area Implementation**:
+- Multi-field operations based on attachment workingArea property
+- Grid pattern calculation around center position (2-unit spacing)
+- Validation for each position: tilled state, land ownership, crop clearance
+- Batch processing for tilling and planting operations
+- Cost calculation for multiple seed purchases
+
+### **Integration Points**:
+- Purchase through equipment shop (5th category tab)
+- Auto-attachment to vehicles upon purchase
+- Q key switching between owned attachments
+- Vehicle system integration for visual updates
+- Save/load system for attachment ownership and states
+- InputManager integration for working area effects
+
+### **Attachment Controls**:
+- Q key: Switch between owned attachments when in vehicle
+- Z key: Debug command to list attachment mesh states
+- Automatic visual updates when entering/exiting vehicles
+- Real-time effect application for speed and efficiency bonuses
+
+## Auto-Save/Auto-Load System
+
+### **Auto-Save Implementation**:
+- Periodic saving every 5 minutes (300,000ms) during gameplay
+- Non-intrusive background operation during game update loop
+- Console logging for save confirmations
+- Maintains lastAutoSaveTime tracking to prevent excessive saves
+
+### **Auto-Load Implementation**:
+- Automatic save detection and loading on game startup
+- Seamless restoration of all game systems and player state
+- Fallback to new game if auto-load fails
+- Console logging for load status and debugging
+
+### **Persistence Features**:
+- Complete game state restoration including attachment ownership
+- Vehicle attachment states and visual mesh recreation
+- Field state data with visual ground textures
+- Equipment ownership and upgrade effects
+- All farming progress and economic state
 
 ### Extension Points
 
@@ -293,3 +357,6 @@ SceneManager → AudioManager → TimeSystem → WeatherSystem → EconomySystem
 - Animal types added to LivestockSystem with costs, upkeep, and products
 - Weather effects customizable via growth and yield multiplier methods
 - Field states extended by adding new FieldState types and corresponding texture patterns
+- Attachment types added to AttachmentSystem catalog with effects, pricing, and 3D models
+- Auto-save interval configurable via handleAutoSave method
+- Working area effects implemented for any attachment type via getPlantingPositions

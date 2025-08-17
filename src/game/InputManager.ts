@@ -7,6 +7,7 @@ import { FarmExpansionSystem } from '../systems/FarmExpansionSystem';
 import { BuildingSystem } from '../systems/BuildingSystem';
 import { LivestockSystem, AnimalType } from '../systems/LivestockSystem';
 import { FieldStateSystem } from '../systems/FieldStateSystem';
+import { AttachmentSystem } from '../systems/AttachmentSystem';
 import { AudioManager } from '../audio/AudioManager';
 
 export class InputManager {
@@ -21,6 +22,7 @@ export class InputManager {
   private buildingSystem: BuildingSystem;
   private livestockSystem: LivestockSystem;
   private fieldStateSystem: FieldStateSystem;
+  private attachmentSystem: AttachmentSystem;
   private audioManager: AudioManager;
   private keys: { [key: string]: boolean } = {};
   private moveSpeed = 20;
@@ -49,6 +51,7 @@ export class InputManager {
     buildingSystem: BuildingSystem,
     livestockSystem: LivestockSystem,
     fieldStateSystem: FieldStateSystem,
+    attachmentSystem: AttachmentSystem,
     audioManager: AudioManager
   ) {
     this.scene = scene;
@@ -61,6 +64,7 @@ export class InputManager {
     this.buildingSystem = buildingSystem;
     this.livestockSystem = livestockSystem;
     this.fieldStateSystem = fieldStateSystem;
+    this.attachmentSystem = attachmentSystem;
     this.audioManager = audioManager;
     this.camera = scene.activeCamera as FreeCamera;
   }
@@ -176,6 +180,17 @@ export class InputManager {
             this.handleTilling();
           }
           break;
+        case 'KeyQ':
+          if (kbInfo.type === 1) {
+            this.handleAttachmentSwitch();
+          }
+          break;
+        case 'KeyZ':
+          if (kbInfo.type === 1) {
+            console.log('=== DEBUG: Listing attachment meshes ===');
+            this.attachmentSystem.debugListAttachmentMeshes();
+          }
+          break;
         case 'Escape':
           if (kbInfo.type === 1) {
             if (this.isPointerLocked) {
@@ -264,12 +279,22 @@ export class InputManager {
       return;
     }
 
-    // Apply equipment speed effects for interaction timing
+    // Apply equipment and attachment speed effects for interaction timing
     const currentTime = Date.now();
     const equipmentEffects = this.equipmentSystem.getEquipmentEffects();
-    const speedMultiplier = equipmentEffects.plantingSpeed || 1.0;
+    
+    // Get attachment effects from current vehicle
+    let attachmentEffects = {};
+    const currentVehicle = this.vehicleSystem.getCurrentVehicle();
+    if (currentVehicle) {
+      attachmentEffects = this.attachmentSystem.getAttachmentEffects(currentVehicle.id);
+    }
+    
+    const equipmentSpeedMultiplier = equipmentEffects.plantingSpeed || 1.0;
+    const attachmentSpeedMultiplier = (attachmentEffects as any).plantingSpeed || 1.0;
+    const totalSpeedMultiplier = equipmentSpeedMultiplier * attachmentSpeedMultiplier;
     const baseInteractionDelay = 500; // 500ms base delay
-    const adjustedDelay = baseInteractionDelay / speedMultiplier;
+    const adjustedDelay = baseInteractionDelay / totalSpeedMultiplier;
     
     if (currentTime - this.lastInteractionTime < adjustedDelay) {
       return; // Still in cooldown
@@ -316,28 +341,50 @@ export class InputManager {
         return;
       }
 
-      if (this.economySystem.canAffordSeeds(this.currentCropType)) {
-        if (this.economySystem.buySeeds(this.currentCropType)) {
-          const success = this.cropSystem.plantCrop(
-            this.currentCropType,
-            gridPosition
-          );
-          if (success) {
-            this.audioManager.playSound('interaction_plant');
-            // Create field state when planting
-            this.fieldStateSystem.updateFieldState(gridPosition, 'planted', this.currentCropType);
-            console.log(
-              `Planted ${this.currentCropType} with ${((speedMultiplier - 1) * 100).toFixed(0)}% speed bonus at (${gridX}, ${gridZ})`
-            );
-            this.lastInteractionTime = currentTime;
-          } else {
-            console.log('Cannot plant here');
+      // Get attachment working area effects
+      const workingArea = (attachmentEffects as any).workingArea || 1;
+      const plantingPositions = this.getPlantingPositions(gridPosition, workingArea);
+      
+      // Check if we can afford seeds for all positions
+      const totalSeedCost = this.economySystem.getSeedPrice(this.currentCropType) * plantingPositions.length;
+      
+      if (this.economySystem.getMoney() >= totalSeedCost) {
+        let plantsSuccessful = 0;
+        let totalCost = 0;
+        
+        // Plant crops at all positions
+        for (const position of plantingPositions) {
+          // Check if field is tilled at this position
+          const positionFieldState = this.fieldStateSystem.getFieldState(position);
+          if (positionFieldState !== 'tilled') {
+            continue; // Skip untilled positions
+          }
+          
+          // Check if position is clear and on owned land
+          if (!this.cropSystem.getCropAt(position) && this.farmExpansionSystem.isPositionOnOwnedLand(position)) {
+            if (this.economySystem.buySeeds(this.currentCropType)) {
+              const success = this.cropSystem.plantCrop(this.currentCropType, position);
+              if (success) {
+                this.fieldStateSystem.updateFieldState(position, 'planted', this.currentCropType);
+                plantsSuccessful++;
+                totalCost += this.economySystem.getSeedPrice(this.currentCropType);
+              }
+            }
           }
         }
+        
+        if (plantsSuccessful > 0) {
+          this.audioManager.playSound('interaction_plant');
+          console.log(
+            `Planted ${plantsSuccessful} ${this.currentCropType}(s) with ${((totalSpeedMultiplier - 1) * 100).toFixed(0)}% speed bonus and ${workingArea}x${workingArea} working area`
+          );
+          this.lastInteractionTime = currentTime;
+        } else {
+          console.log('Cannot plant here - ensure fields are tilled and on owned land');
+        }
       } else {
-        const seedPrice = this.economySystem.getSeedPrice(this.currentCropType);
         console.log(
-          `Not enough money for ${this.currentCropType} seeds (need ${seedPrice})`
+          `Not enough money for ${this.currentCropType} seeds (need $${totalSeedCost} for ${plantingPositions.length} plants)`
         );
       }
     }
@@ -579,7 +626,6 @@ export class InputManager {
   }
 
   private handleVehicleInteraction(): void {
-    console.log('Vehicle interaction triggered, player position:', this.camera.position);
     if (this.vehicleSystem.isInVehicle()) {
       console.log('Exiting vehicle');
       this.audioManager.playSound('vehicle_stop');
@@ -588,16 +634,14 @@ export class InputManager {
     } else {
       const nearestVehicle = this.vehicleSystem.getNearestVehicle(
         this.camera.position,
-        10 // Increased detection distance
+        15 // 15 unit detection distance
       );
       if (nearestVehicle) {
         console.log('Entering vehicle:', nearestVehicle.name);
         this.audioManager.playSound('vehicle_start');
         this.vehicleSystem.enterVehicle(nearestVehicle.id);
       } else {
-        console.log('No vehicle nearby. Player at:', this.camera.position);
-        // Let's also check if any vehicles exist
-        console.log('Available vehicles:', this.vehicleSystem.getVehicleCount());
+        console.log('No vehicle nearby - get closer to a vehicle to enter it');
       }
     }
   }
@@ -611,6 +655,7 @@ export class InputManager {
       this.handleVehicleMovement();
     } else {
       this.handlePlayerMovement(deltaTime);
+      this.updateVehicleProximityIndicator();
     }
   }
 
@@ -738,22 +783,56 @@ export class InputManager {
       return;
     }
 
-    // Apply equipment speed effects for tilling timing
+    // Apply equipment and attachment speed effects for tilling timing
     const currentTime = Date.now();
     const equipmentEffects = this.equipmentSystem.getEquipmentEffects();
-    const speedMultiplier = equipmentEffects.plantingSpeed || 1.0; // Reuse planting speed for tilling
+    
+    // Get attachment effects from current vehicle
+    let attachmentEffects = {};
+    const currentVehicle = this.vehicleSystem.getCurrentVehicle();
+    if (currentVehicle) {
+      attachmentEffects = this.attachmentSystem.getAttachmentEffects(currentVehicle.id);
+    }
+    
+    const equipmentSpeedMultiplier = equipmentEffects.plantingSpeed || 1.0; // Reuse planting speed for tilling
+    const attachmentSpeedMultiplier = (attachmentEffects as any).tillingSpeed || (attachmentEffects as any).plantingSpeed || 1.0;
+    const totalSpeedMultiplier = equipmentSpeedMultiplier * attachmentSpeedMultiplier;
     const baseTillingDelay = 300; // 300ms base delay for tilling
-    const adjustedDelay = baseTillingDelay / speedMultiplier;
+    const adjustedDelay = baseTillingDelay / totalSpeedMultiplier;
     
     if (currentTime - this.lastInteractionTime < adjustedDelay) {
       return; // Still in cooldown
     }
 
-    // Till the field
-    this.fieldStateSystem.updateFieldState(gridPosition, 'tilled');
-    this.audioManager.playSound('interaction_plant'); // Reuse plant sound for now
-    console.log(`Tilled field at (${gridX}, ${gridZ}) with ${((speedMultiplier - 1) * 100).toFixed(0)}% speed bonus`);
-    this.lastInteractionTime = currentTime;
+    // Get attachment working area effects for tilling
+    const workingArea = (attachmentEffects as any).workingArea || 1;
+    const tillingPositions = this.getPlantingPositions(gridPosition, workingArea);
+    
+    let fieldsTilled = 0;
+    
+    // Till fields at all positions
+    for (const position of tillingPositions) {
+      const existingCrop = this.cropSystem.getCropAt(position);
+      if (existingCrop) {
+        continue; // Skip positions with crops
+      }
+      
+      const positionState = this.fieldStateSystem.getFieldState(position);
+      if (positionState !== 'untilled' && positionState !== 'stubble' && positionState !== null) {
+        continue; // Skip already prepared fields
+      }
+      
+      this.fieldStateSystem.updateFieldState(position, 'tilled');
+      fieldsTilled++;
+    }
+    
+    if (fieldsTilled > 0) {
+      this.audioManager.playSound('interaction_plant'); // Reuse plant sound for now
+      console.log(`Tilled ${fieldsTilled} field(s) with ${((totalSpeedMultiplier - 1) * 100).toFixed(0)}% speed bonus and ${workingArea}x${workingArea} working area`);
+      this.lastInteractionTime = currentTime;
+    } else {
+      console.log('No fields could be tilled in this area');
+    }
   }
 
   private sellAllCrops(): void {
@@ -775,5 +854,58 @@ export class InputManager {
     } else {
       console.log('No crops to sell');
     }
+  }
+
+  private handleAttachmentSwitch(): void {
+    const currentVehicle = this.vehicleSystem.getCurrentVehicle();
+    if (!currentVehicle) {
+      console.log('No vehicle to switch attachment for');
+      return;
+    }
+
+    const success = this.attachmentSystem.switchAttachment(currentVehicle.id);
+    if (success) {
+      const currentAttachment = this.attachmentSystem.getCurrentAttachment(currentVehicle.id);
+      const attachmentName = currentAttachment ? 
+        this.attachmentSystem.getAttachment(`${currentAttachment}_attachment`)?.name || currentAttachment : 
+        'None';
+      console.log(`Switched to attachment: ${attachmentName}`);
+      this.audioManager.playSound('interaction_click');
+    } else {
+      console.log('No attachments available or failed to switch');
+    }
+  }
+
+  private updateVehicleProximityIndicator(): void {
+    const promptElement = document.getElementById('vehicle-prompt');
+    if (!promptElement) return;
+
+    const nearestVehicle = this.vehicleSystem.getNearestVehicle(this.camera.position, 15);
+    if (nearestVehicle && !this.vehicleSystem.isInVehicle()) {
+      promptElement.classList.remove('hidden');
+      const distance = Vector3.Distance(this.camera.position, nearestVehicle.mesh.position);
+      promptElement.textContent = `Press E to enter ${nearestVehicle.name} (${distance.toFixed(1)}m)`;
+    } else {
+      promptElement.classList.add('hidden');
+    }
+  }
+
+  private getPlantingPositions(centerPosition: Vector3, workingArea: number): Vector3[] {
+    const positions: Vector3[] = [];
+    const halfArea = Math.floor(workingArea / 2);
+    
+    // Generate positions in a square pattern around the center
+    for (let x = -halfArea; x <= halfArea; x++) {
+      for (let z = -halfArea; z <= halfArea; z++) {
+        const position = new Vector3(
+          centerPosition.x + (x * 2), // 2-unit grid spacing
+          centerPosition.y,
+          centerPosition.z + (z * 2)
+        );
+        positions.push(position);
+      }
+    }
+    
+    return positions;
   }
 }

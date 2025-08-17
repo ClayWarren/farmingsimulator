@@ -9,7 +9,7 @@ A modern farming simulation game built with TypeScript and Babylon.js.
 - **Weather System**: Dynamic weather that affects gameplay
 - **Modern Controls**: WASD movement with mouse look controls
 - **Pause System**: ESC key pauses game with resume and restart options
-- **Save/Load System**: Complete game state persistence with localStorage
+- **Save/Load System**: Complete game state persistence with auto-save and auto-load
 - **Audio System**: Procedural ambient sounds, weather audio, and interaction feedback
 - **Equipment Shop**: Purchase tools, vehicles, storage, and processing equipment
 - **Responsive UI**: Clean interface showing farm status and controls
@@ -20,6 +20,8 @@ A modern farming simulation game built with TypeScript and Babylon.js.
 - **Mouse** - Look around (click to lock cursor)
 - **Shift** - Run faster
 - **T** - Till soil (prepare ground for planting)
+- **Q** - Switch attachment (when in vehicle)
+- **Z** - Debug attachments (development tool)
 - **Space** - Interact/Plant/Harvest/Place Buildings/Animals
 - **E** - Vehicle interaction
 - **1-4** - Select crop types (wheat, corn, potato, carrot)
@@ -124,6 +126,9 @@ src/
 - ✅ **Weather effects on crops** with growth and yield modifiers
 - ✅ **Field state visualization** with dynamic ground textures showing farming progress
 - ✅ **Realistic tilling system** requiring soil preparation before planting
+- ✅ **Attachment system** with plow, seeder, and cultivator implements
+- ✅ **Auto-save/auto-load** system maintaining progress across browser sessions
+- ✅ **Working area effects** for attachments enabling multi-field operations
 
 ## Crop System Details
 
@@ -205,8 +210,9 @@ src/
 17. **Equipment shop**: Press P to browse and purchase equipment
 18. **Tool upgrades**: Buy better hoes for increased tilling, planting, and harvest speed
 19. **Vehicle upgrades**: Purchase advanced tractors and harvesters
-20. **Storage expansion**: Buy silos and warehouses for increased capacity
-21. **Processing equipment**: Invest in mills and processors for value-added products
+20. **Attachment upgrades**: Buy plow, seeder, and cultivator attachments for vehicles
+21. **Storage expansion**: Buy silos and warehouses for increased capacity
+22. **Processing equipment**: Invest in mills and processors for value-added products
 
 ### **Farm Expansion**:
 
@@ -245,6 +251,11 @@ src/
 - **Food Processor**: Process vegetables ($22,000)
 - **Packaging Plant**: Package goods for maximum value ($45,000)
 
+### **Attachments** (3 items):
+- **Heavy Plow**: 2x tilling speed, 3x3 working area, +50% efficiency ($5,000)
+- **Precision Seeder**: 2.5x planting speed, 3x3 working area, +80% efficiency ($7,500)
+- **Field Cultivator**: 1.5x tilling/planting speed, 2x2 working area, +30% efficiency ($4,000)
+
 ## Audio System Details
 
 ### **Ambient Sounds**:
@@ -271,8 +282,10 @@ src/
 - **Vehicle state**: All vehicle positions and occupancy
 
 ### **Save Features**:
-- **Automatic persistence**: Saves persist between browser sessions
-- **Manual save/load**: Save and load buttons in pause menu
+- **Auto-save system**: Automatically saves every 5 minutes during gameplay
+- **Auto-load on startup**: Automatically restores previous save when game loads
+- **Manual save/load**: Save and load buttons in pause menu for manual control
+- **Seamless persistence**: Never lose progress when refreshing browser
 - **Version control**: Save format versioning for future compatibility
 - **Error handling**: Graceful handling of save/load failures
 
@@ -353,6 +366,13 @@ src/
 - **Step 4**: Press Space on mature crops to harvest and return to harvested state
 - **Step 5**: Fields naturally decay: harvested → stubble → untilled over time
 
+### **Attachment Enhanced Workflow**:
+- **Vehicle Mode**: Enter tractor (E key) and purchase attachments from shop
+- **Attachment Switching**: Press Q to cycle through owned attachments
+- **Multi-Field Operations**: Attachments work on 2x2 or 3x3 areas simultaneously
+- **Enhanced Efficiency**: Attachments provide speed bonuses and larger working areas
+- **Visual Feedback**: Enhanced field state visuals show attachment work patterns
+
 ## Roadmap
 
 - [x] ~~Economic system with crop selling and money management~~
@@ -366,6 +386,9 @@ src/
 - [x] ~~Weather effects on crop yields~~
 - [x] ~~Field state visualization system~~
 - [x] ~~Realistic tilling mechanics~~
+- [x] ~~Attachment system with visual implements~~
+- [x] ~~Auto-save and auto-load functionality~~
+- [x] ~~Working area effects for multi-field operations~~
 - [ ] Multiplayer farming
 - [ ] Advanced farming equipment
 - [ ] Seasonal crop varieties

@@ -7,6 +7,7 @@ import { EquipmentSystem, Equipment } from '../systems/EquipmentSystem';
 import { FarmExpansionSystem } from '../systems/FarmExpansionSystem';
 import { BuildingSystem } from '../systems/BuildingSystem';
 import { LivestockSystem } from '../systems/LivestockSystem';
+import { AttachmentSystem, Attachment } from '../systems/AttachmentSystem';
 
 export class UIManager {
   private scene: Scene;
@@ -18,6 +19,7 @@ export class UIManager {
   private farmExpansionSystem: FarmExpansionSystem;
   private buildingSystem: BuildingSystem;
   private livestockSystem: LivestockSystem;
+  private attachmentSystem: AttachmentSystem;
   private isShopOpen: boolean = false;
   private currentShopCategory: number = 0;
   private onBuildingSelected?: (buildingId: string) => void;
@@ -31,7 +33,8 @@ export class UIManager {
     equipmentSystem: EquipmentSystem,
     farmExpansionSystem: FarmExpansionSystem,
     buildingSystem: BuildingSystem,
-    livestockSystem: LivestockSystem
+    livestockSystem: LivestockSystem,
+    attachmentSystem: AttachmentSystem
   ) {
     this.scene = scene;
     this.timeSystem = timeSystem;
@@ -42,6 +45,7 @@ export class UIManager {
     this.farmExpansionSystem = farmExpansionSystem;
     this.buildingSystem = buildingSystem;
     this.livestockSystem = livestockSystem;
+    this.attachmentSystem = attachmentSystem;
   }
 
   initialize(): void {
@@ -54,6 +58,7 @@ export class UIManager {
   update(): void {
     this.updateUI();
     this.updatePlotInfo();
+    this.updateVehicleStatus();
   }
 
   private updatePlotInfo(): void {
@@ -388,6 +393,18 @@ export class UIManager {
     const equipmentGrid = document.getElementById('equipment-grid');
     if (!equipmentGrid) return;
 
+    // Handle attachments category (index 4)
+    if (this.currentShopCategory === 4) {
+      equipmentGrid.innerHTML = '';
+      const attachments = this.attachmentSystem.getAttachmentCatalog();
+      attachments.forEach(attachment => {
+        const card = this.createAttachmentCard(attachment);
+        equipmentGrid.appendChild(card);
+      });
+      return;
+    }
+    
+    // Handle regular equipment categories
     const categories = this.equipmentSystem.getEquipmentByCategory();
     const currentCategory = categories[this.currentShopCategory];
     
@@ -445,6 +462,71 @@ export class UIManager {
     return card;
   }
 
+  private createAttachmentCard(attachment: Attachment): HTMLElement {
+    const card = document.createElement('div');
+    card.className = `bg-slate-900/80 border-2 border-slate-700 rounded-lg p-5 transition-all hover:border-blue-600 hover:-translate-y-1 ${attachment.owned ? 'border-green-600 bg-green-900/20' : ''}`;
+
+    const effectsHtml = Object.entries(attachment.effects)
+      .map(([key, value]) => {
+        if (value === undefined) return '';
+        const formattedKey = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+        const formattedValue = typeof value === 'number' 
+          ? (key.includes('Speed') || key.includes('Efficiency'))
+            ? `+${Math.round((value - 1) * 100)}%`
+            : `${value}x`
+          : value;
+        return `<div class="text-xs text-slate-400 my-1">• ${formattedKey}: ${formattedValue}</div>`;
+      })
+      .filter(html => html !== '')
+      .join('');
+
+    const canAfford = this.economySystem.getMoney() >= attachment.price;
+    
+    card.innerHTML = `
+      <div class="text-lg font-bold text-slate-100 mb-2">${attachment.name}</div>
+      <div class="text-sm text-slate-300 mb-3 leading-snug">${attachment.description}</div>
+      <div class="mb-4">${effectsHtml}</div>
+      <div class="text-base font-bold text-amber-400 mb-3">$${attachment.price.toLocaleString()}</div>
+      ${attachment.owned 
+        ? '<button class="w-full py-2 bg-green-600 text-white rounded-md text-sm font-bold cursor-default">Owned</button>'
+        : `<button class="w-full py-2 bg-green-700 text-white rounded-md text-sm font-bold transition-colors hover:bg-green-600 disabled:bg-slate-600 disabled:cursor-not-allowed" ${!canAfford ? 'disabled' : ''} data-attachment-id="${attachment.id}">
+             ${canAfford ? 'Buy' : 'Not enough money'}
+           </button>`
+      }
+    `;
+
+    // Add buy button event listener
+    if (!attachment.owned && canAfford) {
+      const buyButton = card.querySelector('button') as HTMLButtonElement;
+      if (buyButton) {
+        buyButton.addEventListener('click', () => {
+          (window as any).game?.getAudioManager()?.playSound('interaction_click');
+          this.purchaseAttachment(attachment.id);
+        });
+      }
+    }
+
+    return card;
+  }
+
+  private purchaseAttachment(attachmentId: string): void {
+    const attachment = this.attachmentSystem.getAttachment(attachmentId);
+    if (!attachment || attachment.owned) {
+      this.showSaveMessage('Purchase Failed!');
+      return;
+    }
+
+    if (this.economySystem.getMoney() >= attachment.price) {
+      this.economySystem.setMoney(this.economySystem.getMoney() - attachment.price);
+      this.attachmentSystem.purchaseAttachment(attachmentId);
+      (window as any).game?.getAudioManager()?.playSound('economy_buy');
+      this.updateShop();
+      this.showSaveMessage('Attachment Purchased!');
+    } else {
+      this.showSaveMessage('Not enough money!');
+    }
+  }
+
   private purchaseEquipment(equipmentId: string): void {
     const success = (window as any).game?.purchaseEquipment(equipmentId);
     if (success) {
@@ -452,6 +534,43 @@ export class UIManager {
       this.showSaveMessage('Equipment Purchased!');
     } else {
       this.showSaveMessage('Purchase Failed!');
+    }
+  }
+
+  private updateVehicleStatus(): void {
+    const vehicleElement = document.getElementById('current-vehicle');
+    const attachmentElement = document.getElementById('current-attachment');
+    
+    if (vehicleElement) {
+      vehicleElement.textContent = 'On Foot'; // This will be updated by the input manager when entering vehicles
+    }
+
+    if (attachmentElement) {
+      // Get current attachment from attachment system
+      // Check all vehicles for attachments and show the first one found
+      let currentAttachment = 'None';
+      const vehicles = ['tractor_1', 'combine_harvester_1'];
+      
+      for (const vehicleId of vehicles) {
+        const attachmentType = this.attachmentSystem.getCurrentAttachment(vehicleId);
+        if (attachmentType) {
+          const attachment = Array.from(this.attachmentSystem.getAttachmentCatalog())
+            .find(att => att.type === attachmentType);
+          if (attachment) {
+            currentAttachment = attachment.name;
+            break;
+          }
+        }
+      }
+      
+      attachmentElement.textContent = currentAttachment;
+    }
+  }
+
+  updateVehicleDisplay(vehicleName: string): void {
+    const vehicleElement = document.getElementById('current-vehicle');
+    if (vehicleElement) {
+      vehicleElement.textContent = vehicleName;
     }
   }
 

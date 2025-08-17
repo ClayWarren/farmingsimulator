@@ -4,6 +4,7 @@ import { CropType } from '../systems/CropSystem';
 import { WeatherType } from '../systems/WeatherSystem';
 import { AnimalType } from '../systems/LivestockSystem';
 import { FieldState } from '../systems/FieldStateSystem';
+import { AttachmentType } from '../systems/AttachmentSystem';
 
 export interface SavedCropData {
   type: CropType;
@@ -73,6 +74,14 @@ export interface SavedFieldStateData {
   lastStateChange: number;
 }
 
+export interface SavedAttachmentData {
+  ownedAttachments: string[];
+  vehicleAttachments: Array<{
+    vehicleId: string;
+    currentAttachment: AttachmentType | null;
+  }>;
+}
+
 export interface GameSaveData {
   version: string;
   timestamp: number;
@@ -88,6 +97,7 @@ export interface GameSaveData {
   buildingData: { placedBuildings: Array<{ id: string; position: { x: number; y: number; z: number }; rotation: { x: number; y: number; z: number }; dimensions: { x: number; y: number; z: number }; }>; };
   livestockData: SavedLivestockData;
   fieldStateData?: SavedFieldStateData[];
+  attachmentData?: SavedAttachmentData;
 }
 
 export class SaveManager {

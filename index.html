@@ -72,9 +72,11 @@
         <h3 class="text-lg font-bold mb-3 text-white border-b border-slate-500 pb-2">Controls</h3>
         <div class="space-y-1 text-xs text-slate-300">
           <div class="grid grid-cols-2 gap-2">
-            <div>WASD - Move</div>
-            <div>Mouse - Look</div>
+            <div>WASD - Move/Drive</div>
+            <div>Mouse - Look Around</div>
             <div>T - Till Soil</div>
+            <div>Q - Switch Attachment</div>
+            <div>Z - Debug Attachments</div>
             <div>Space - Plant/Harvest</div>
             <div>1-4 - Select Crop</div>
             <div>R - Sell All</div>
@@ -89,6 +91,9 @@
         </div>
         <div class="mt-3 pt-2 border-t border-slate-600">
           <div class="text-xs text-slate-400">Selected: <span id="selected-crop" class="text-white font-medium">Wheat</span></div>
+          <div class="text-xs text-slate-400 mt-1">Vehicle: <span id="current-vehicle" class="text-white font-medium">On Foot</span></div>
+          <div class="text-xs text-slate-400 mt-1">Attachment: <span id="current-attachment" class="text-white font-medium">None</span></div>
+          <div id="vehicle-prompt" class="text-xs text-green-400 mt-2 hidden">Press E to enter vehicle</div>
         </div>
       </div>
 
@@ -126,6 +131,7 @@
             <button class="category-tab py-3 px-5 bg-slate-700 text-slate-400 border-none rounded-t-md cursor-pointer transition-colors text-sm hover:bg-blue-700 hover:text-white" data-category="1">Vehicles</button>
             <button class="category-tab py-3 px-5 bg-slate-700 text-slate-400 border-none rounded-t-md cursor-pointer transition-colors text-sm hover:bg-blue-700 hover:text-white" data-category="2">Storage</button>
             <button class="category-tab py-3 px-5 bg-slate-700 text-slate-400 border-none rounded-t-md cursor-pointer transition-colors text-sm hover:bg-blue-700 hover:text-white" data-category="3">Processing</button>
+            <button class="category-tab py-3 px-5 bg-slate-700 text-slate-400 border-none rounded-t-md cursor-pointer transition-colors text-sm hover:bg-blue-700 hover:text-white" data-category="4">Attachments</button>
           </div>
 
           <div class="min-h-[400px]">

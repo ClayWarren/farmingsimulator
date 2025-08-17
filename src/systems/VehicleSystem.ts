@@ -25,6 +25,8 @@ export class VehicleSystem {
   private playerCamera: FreeCamera;
   private currentVehicle: Vehicle | null = null;
   private vehicleCamera: FreeCamera | null = null;
+  private onVehicleEnterCallback?: (vehicleName: string) => void;
+  private onVehicleExitCallback?: () => void;
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -47,7 +49,7 @@ export class VehicleSystem {
       id: 'tractor_1',
       name: 'Farm Tractor',
       mesh: tractorMesh,
-      position: new Vector3(15, 0, 15),
+      position: new Vector3(5, 0, -15), // Closer to starting position
       rotation: Vector3.Zero(),
       speed: 0,
       maxSpeed: 25,
@@ -65,7 +67,7 @@ export class VehicleSystem {
       id: 'combine_harvester_1',
       name: 'Combine Harvester',
       mesh: combineHarvesterMesh,
-      position: new Vector3(25, 0, 15), // Position it near the tractor
+      position: new Vector3(10, 0, -15), // Position it near the tractor
       rotation: Vector3.Zero(),
       speed: 0,
       maxSpeed: 15, // Slower than tractor but more powerful
@@ -261,19 +263,30 @@ export class VehicleSystem {
     vehicle.isOccupied = true;
     this.currentVehicle = vehicle;
 
+    // Create vehicle camera with improved positioning for farming
+    const initialCameraPosition = vehicle.mesh.position.add(new Vector3(0, 5, -12));
     this.vehicleCamera = new FreeCamera(
       'vehicleCamera',
-      vehicle.mesh.position.add(new Vector3(0, 3, -8)),
+      initialCameraPosition,
       this.scene
     );
     
     // Configure vehicle camera for mouse look
-    this.vehicleCamera.setTarget(vehicle.mesh.position);
-    
-    // Set up proper mouse sensitivity for vehicle camera
     this.vehicleCamera.angularSensibility = 2000;
+    this.vehicleCamera.speed = 0.5;
+    
+    // Set initial rotation to look slightly down for better field view
+    this.vehicleCamera.rotation.x = 0.1; // Look down slightly
+    
+    // Enable mouse controls for the vehicle camera
+    this.vehicleCamera.attachControl(this.scene.getEngine().getRenderingCanvas(), true);
     
     this.scene.activeCamera = this.vehicleCamera;
+    
+    // Notify UI about vehicle enter
+    if (this.onVehicleEnterCallback) {
+      this.onVehicleEnterCallback(vehicle.name);
+    }
     
     // Attach controls to canvas using the correct method
     this.vehicleCamera.attachControl(this.scene.getEngine().getRenderingCanvas(), true);
@@ -307,6 +320,12 @@ export class VehicleSystem {
     this.playerCamera.position = exitPosition;
 
     console.log(`Exited ${this.currentVehicle.name}`);
+    
+    // Notify UI about vehicle exit
+    if (this.onVehicleExitCallback) {
+      this.onVehicleExitCallback();
+    }
+    
     this.currentVehicle = null;
     return true;
   }
@@ -319,6 +338,27 @@ export class VehicleSystem {
     if (this.currentVehicle && this.vehicleCamera) {
       this.updateVehicleCamera();
     }
+  }
+
+
+  getVehicles(): Map<string, Vehicle> {
+    return this.vehicles;
+  }
+
+  getCurrentVehicle(): Vehicle | null {
+    return this.currentVehicle;
+  }
+
+  getVehicle(vehicleId: string): Vehicle | undefined {
+    return this.vehicles.get(vehicleId);
+  }
+
+  setVehicleEnterCallback(callback: (vehicleName: string) => void): void {
+    this.onVehicleEnterCallback = callback;
+  }
+
+  setVehicleExitCallback(callback: () => void): void {
+    this.onVehicleExitCallback = callback;
   }
 
   private updateVehicle(vehicle: Vehicle, deltaTime: number): void {
@@ -339,15 +379,21 @@ export class VehicleSystem {
     if (!this.currentVehicle || !this.vehicleCamera) return;
 
     const vehiclePosition = this.currentVehicle.mesh.position;
-    const cameraOffset = new Vector3(0, 3, -8);
+    // Improved camera offset for better farming visibility
+    // Higher up and further back for better field overview
+    const cameraOffset = new Vector3(0, 5, -12);
 
+    // Calculate the offset position relative to vehicle orientation but keep free camera look
     const rotatedOffset = Vector3.TransformCoordinates(
       cameraOffset,
       this.currentVehicle.mesh.getWorldMatrix()
     );
 
+    // Only update position, don't override the camera's rotation/target
     this.vehicleCamera.position = vehiclePosition.add(rotatedOffset);
-    this.vehicleCamera.setTarget(vehiclePosition.add(new Vector3(0, 1, 0)));
+    
+    // Don't use setTarget() as it overrides mouse look controls
+    // The camera should maintain its free look capabilities
   }
 
   handleVehicleInput(
@@ -400,10 +446,6 @@ export class VehicleSystem {
     return nearestVehicle;
   }
 
-  getCurrentVehicle(): Vehicle | null {
-    return this.currentVehicle;
-  }
-
   getVehicleCount(): number {
     return this.vehicles.size;
   }
@@ -412,9 +454,6 @@ export class VehicleSystem {
     return this.currentVehicle !== null;
   }
 
-  getVehicles(): Vehicle[] {
-    return Array.from(this.vehicles.values());
-  }
 
   getVehicleByMesh(mesh: Mesh): Vehicle | null {
     for (const vehicle of this.vehicles.values()) {
